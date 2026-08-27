@@ -1,5 +1,5 @@
 /* NEOINVENT V4 — Service Worker (PWA offline) */
-const CACHE = 'neoinvent-v4-v1';
+const CACHE = 'neoinvent-v4-v2';
 const ASSETS = [
   './',
   './index.html',
