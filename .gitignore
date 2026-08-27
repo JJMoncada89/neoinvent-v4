@@ -1,0 +1,7 @@
+# NEOINVENT V4 — .gitignore
+node_modules/
+dist/
+*.log
+.DS_Store
+.vscode/
+.idea/
