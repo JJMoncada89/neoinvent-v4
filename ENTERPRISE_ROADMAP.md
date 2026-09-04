@@ -76,13 +76,19 @@
 - [x] **4.4** Declaración IVA (débito - crédito, saldo a favor/pagar) ✅
 - [ ] **4.5** Cierre contable anual y libro mayor por cuenta
 
-### 🔨 FASE 5 — SERVICIOS Y TECNOLOGÍA
-- [ ] **5.1** Catálogo de servicios
-- [ ] **5.2** Activos TI
-- [ ] **5.3** Contratos con SLA
-- [ ] **5.4** Órdenes de trabajo
+### 🔨 FASE 5 — SERVICIOS Y TECNOLOGÍA — 90% COMPLETADA ✅
+- [x] **5.1** Catálogo de servicios (precio, duración, categoría) ✅
+- [x] **5.2** Activos TI con asset_tag automático, asignación a empleados, licencias ✅
+- [x] **5.3** Contratos con SLA (horas respuesta/resolución, vencimiento automático) ✅
+- [x] **5.4** Órdenes de trabajo con prioridad, técnico asignado, detección de SLA vencido ⏰ ✅
+- [ ] **5.5** Integración servicios en POS (vender servicios además de bienes)
 
-### 🔨 FASE 6 — DASHBOARD EJECUTIVO
+### 🔨 FASE 6 — DASHBOARD EJECUTIVO — 85% COMPLETADA ✅
+- [x] **6.1** KPIs por departamento (Ventas/Compras/RRHH/Servicio TI) en la cabecera del dashboard ✅
+- [x] **6.2** Margen de utilidad %, nómina mensual agregada, WO abiertas y SLA vencidos ✅
+- [x] **6.3** Alertas: stock bajo, SLA vencido, evaluación promedio de empleados y proveedores ✅
+- [ ] **6.4** Reportes programados por email
+- [ ] **6.5** Gráficas de tendencia inter-departamento
 
 ---
 
@@ -98,7 +104,7 @@ Al retomar la sesión, el estado se reconstruye así:
 7. **Pendiente Fase 5**: servicios/activos TI/SLA. **Fase 6**: dashboard ejecutivo por departamento.
 8. **Gate de calidad**: ejecutar `node --check` en todo JS + test E2E `/tmp/vtest/browser_test.js` antes de cada push.
 
-COMPLETADO: Fase 4 Contabilidad (asientos automáticos + balance + PyG + IVA), 3.5 evaluaciones RRHH, 2.4 rating proveedores. **Próximo: Fase 5 Servicios/TI/SLA y Fase 6 Dashboard Ejecutivo por departamento.**
+COMPLETADO: Fases 1-6 (Auditoría Forense, Compras, RRHH+Nómina, Contabilidad, Servicios/TI/SLA, Dashboard Ejecutivo). **Pendientes menores: 4.5 cierre anual, 5.5 servicios en POS, 6.4-6.5 reportes email y tendencias.**
 
 ## PROGRESO
 | Fase | Estado | Progreso | Última actualización |
@@ -108,5 +114,5 @@ COMPLETADO: Fase 4 Contabilidad (asientos automáticos + balance + PyG + IVA), 3
 | 2 - Compras | ✅ Completa | 95% | 27-ago-2026 |
 | 3 - RRHH | ✅ Completa | 95% | 27-ago-2026 |
 | 4 - Contabilidad | 🔧 Casi completa | 85% | 27-ago-2026 |
-| 5 - Servicios | ⏳ Pendiente | 0% | — |
-| 6 - Dashboard | ⏳ Pendiente | 0% | — |
+| 5 - Servicios | 🔧 Casi completa | 90% | 27-ago-2026 |
+| 6 - Dashboard | 🔧 Casi completa | 85% | 27-ago-2026 |

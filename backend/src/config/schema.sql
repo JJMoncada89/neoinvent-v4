@@ -422,3 +422,63 @@ VALUES
   ('5.2.3.01', 'Gasto de servicios públicos', 'GASTO'),
   ('5.2.4.01', 'Gasto de depreciación', 'GASTO')
 ON CONFLICT (code) DO NOTHING;
+
+-- ================================================
+-- FASE 5 — SERVICIOS Y TECNOLOGÍA
+-- ================================================
+CREATE TABLE IF NOT EXISTS it_assets (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    asset_tag VARCHAR(30) UNIQUE NOT NULL,
+    nombre VARCHAR(255) NOT NULL,
+    tipo VARCHAR(30) NOT NULL,           -- LAPTOP / DESKTOP / SERVER / MONITOR / PRINTER / SOFTWARE / LICENCIA / RED
+    marca VARCHAR(100),
+    modelo VARCHAR(100),
+    serial VARCHAR(100),
+    assigned_to UUID REFERENCES employees(id),
+    ubicacion VARCHAR(100),
+    purchase_date DATE,
+    purchase_cost DECIMAL(14,2) DEFAULT 0,
+    warranty_until DATE,
+    license_key VARCHAR(255),
+    license_expires DATE,
+    status VARCHAR(20) DEFAULT 'OPERATIVO',
+    notes TEXT,
+    creado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT chk_asset_type CHECK (tipo IN ('LAPTOP','DESKTOP','SERVER','MONITOR','PRINTER','PHONE','SOFTWARE','LICENCIA','RED','OTRO')),
+    CONSTRAINT chk_asset_status CHECK (status IN ('OPERATIVO','EN_MANTENIMIENTO','REPARACION','RETIRADO','PRESTADO'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_it_assets_assigned ON it_assets(assigned_to);
+
+CREATE TABLE IF NOT EXISTS sla_contracts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    client_id UUID REFERENCES clientes(id),
+    service_id UUID REFERENCES services(id),
+    nombre VARCHAR(255) NOT NULL,
+    sla_horas_respuesta INTEGER DEFAULT 4,
+    sla_horas_resolucion INTEGER DEFAULT 24,
+    precio_mensual DECIMAL(14,2) DEFAULT 0,
+    start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    end_date DATE,
+    status VARCHAR(20) DEFAULT 'VIGENTE',
+    creado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT chk_sla_status CHECK (status IN ('VIGENTE','VENCIDO','RESCINDIDO'))
+);
+
+CREATE TABLE IF NOT EXISTS work_orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    wo_number VARCHAR(30) UNIQUE NOT NULL,
+    client_id UUID REFERENCES clientes(id),
+    service_id UUID REFERENCES services(id),
+    sla_id UUID REFERENCES sla_contracts(id),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    priority VARCHAR(15) DEFAULT 'NORMAL',   -- BAJA/NORMAL/ALTA/CRITICA
+    status VARCHAR(20) DEFAULT 'ABIERTA',    -- ABIERTA/ASIGNADA/EN_PROGRESO/RESUELTA/CERRADA
+    assigned_to UUID REFERENCES employees(id),
+    opened_at TIMESTAMPTZ DEFAULT NOW(),
+    sla_due_at TIMESTAMPTZ,
+    resolved_at TIMESTAMPTZ,
+    resolution_notes TEXT,
+    costo DECIMAL(14,2) DEFAULT 0
+);
