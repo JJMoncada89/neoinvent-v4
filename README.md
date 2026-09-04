@@ -106,5 +106,20 @@ Se conservó el **concepto de negocio** (inventario, POS, ventas, reportes, role
 - [ ] Compras a proveedores (ordenes de compra) usando ya el catálogo existente
 - [ ] Modo multi-caja con turnos y corte de caja
 
+## 🏢 Módulo Enterprise
+
+NeoInvent está escalando a **plataforma empresarial completa** (ver `ENTERPRISE_ROADMAP.md` para el plan maestro):
+
+| Módulo | Estado | Ubicación |
+|---|---|---|
+| 🏛️ SENIAT fiscal (IVA 16/8/0, facturación, RIF) | ✅ Implementado | `backend/src/config/seniat.js` |
+| 🔐 Auditoría Forense (hash-chaining SHA-256) | ✅ 90% | `backend/.../auditService.js` + `js/views/audit.js` |
+| 👥 RRHH (empleados, contratos, despidos) | ✅ 60% | `backend/src/controllers/hrController.js` + `js/views/hr.js` |
+| 🛒 Compras (requisiciones, PO, GR) | 📋 Esquema listo | `backend/src/config/schema.sql` |
+| 🧾 Contabilidad | 📋 Roadmap | — |
+
+### 🔐 Atajo secreto de auditoría (solo creador)
+Presiona **Ctrl+Alt+A** dentro de la app conectada a sesión. Exige clave maestra (`MASTER_AUDIT_KEY_HASH`). Cada login, logout, venta y ajuste de stock queda registrado con timestamp, usuario, IP y hash encadenado. Acceso NO aparece en el menú lateral.
+
 ---
 Hecho para ser simple, vendible y que **nunca vuelva a romper un deploy**. 👑

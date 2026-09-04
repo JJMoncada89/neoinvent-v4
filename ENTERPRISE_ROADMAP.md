@@ -75,6 +75,20 @@
 
 ---
 
+## 🔄 CÓMO CONTINUAR DESDE AQUÍ (checkpoint)
+
+Al retomar la sesión, el estado se reconstruye así:
+1. **Repo**: `JJMoncada89/neoinvent-v4`, rama `main` HEAD `553e525`.
+2. **Backend** en `backend/`: Express + PG, rutas en `src/routes/`, controladores en `src/controllers/`. Esquema SQL en `src/config/schema.sql` (8+ tablas: usuarios, productos, ventas, venta_items, clientes, facturas_seniat, movimientos_inventario, categorías + employees, contracts, terminations, requisitions, POs, services + audit_trail).
+3. **Auditoría forense**: `backend/src/services/auditService.js` (hash-chain SHA-256), middleware `auditLog.js`, rutas `/api/v1/audit/*` con clave maestra `MASTER_AUDIT_KEY_HASH`. Frontend: `js/views/audit.js` + atajo `Ctrl+Alt+A` en `js/app.js`.
+4. **RRHH**: `backend/src/controllers/hrController.js` (empleados/contratos/terminaciones con cálculo LOTTT) + `js/views/hr.js`. Falta UI de nómina (IVSS 4% + FAOV 2% + ISLR) y evaluaciones.
+5. **Pendiente Fase 2 (Compras)**: extensiones de controllers/routes + vistas para requisiciones, órdenes de compra y recepción. Tablas ya en schema.
+6. **Pendiente Fase 4 (Contabilidad)**: plan de cuentas, asientos automáticos, balance, declaración IVA. 
+7. **Pendiente Fase 5**: servicios/activos TI/SLA. **Fase 6**: dashboard ejecutivo por departamento.
+8. **Gate de calidad**: ejecutar `node --check` en todo JS + test E2E `/tmp/vtest/browser_test.js` antes de cada push.
+
+Próximo milestone lógico: **UI de nómina venezolana** (mayor valor legal) o **Fase 2 compras** (mayor valor operativo).
+
 ## PROGRESO
 | Fase | Estado | Progreso | Última actualización |
 |---|---|---|---|
