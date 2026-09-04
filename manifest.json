@@ -1,15 +1,15 @@
 {
-  "name": "NEOINVENT V4 — Inventario & POS",
+  "name": "NEOINVENT — Inventario & POS Fiscal",
   "short_name": "NEOINVENT",
-  "description": "Sistema profesional de gestión de inventario y punto de venta",
+  "description": "Sistema de inventario y punto de venta con cumplimiento fiscal SENIAT Venezuela",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0b1120",
-  "theme_color": "#0f172a",
+  "background_color": "#0c1220",
+  "theme_color": "#1e3a8a",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' fill='%2322d3ee' text-anchor='middle'>N</text></svg>",
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231e3a8a'/><text x='50' y='68' font-size='52' font-family='Arial' font-weight='bold' fill='%2360a5fa' text-anchor='middle'>N</text></svg>",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"

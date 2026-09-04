@@ -1,0 +1,43 @@
+{
+  "name": "neoinvent-backend",
+  "version": "4.0.0",
+  "description": "NEOINVENT V4 - Backend API con PostgreSQL y cumplimiento SENIAT",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "migrate": "node src/config/migrate.js",
+    "seed": "node src/config/seed.js",
+    "test": "jest --coverage",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.11.5",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^3.23.8",
+    "helmet": "^7.1.0",
+    "cors": "^2.8.5",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.4.5",
+    "pdfkit": "^0.15.0",
+    "qrcode": "^1.5.3",
+    "axios": "^1.7.2",
+    "node-cron": "^3.0.3",
+    "winston": "^3.13.0",
+    "express-rate-limit": "^7.2.0",
+    "express-validator": "^7.1.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0",
+    "eslint": "^8.57.0",
+    "@types/node": "^20.12.12"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

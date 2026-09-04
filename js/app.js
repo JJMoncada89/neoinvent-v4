@@ -104,7 +104,9 @@
   function enterApp() {
     loginScreen().hidden = true;
     appEl().hidden = false;
-    userChip().innerHTML = '<strong>' + Utils.esc(session.name) + '</strong><span>' + Utils.esc(session.role) + '</span>';
+    userChip().innerHTML =
+      '<div class="user-avatar">' + Utils.esc(session.name.charAt(0).toUpperCase()) + '</div>' +
+      '<div><strong>' + Utils.esc(session.name) + '</strong><span>' + Utils.esc(session.role) + '</span></div>';
     renderNav();
     if (!location.hash) location.hash = '#/dashboard';
     else goRoute();
