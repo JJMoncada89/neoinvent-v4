@@ -123,3 +123,23 @@ Presiona **Ctrl+Alt+A** dentro de la app conectada a sesión. Exige clave maestr
 
 ---
 Hecho para ser simple, vendible y que **nunca vuelva a romper un deploy**. 👑
+
+## 🧪 Testing por usuarios humanos (QA)
+
+**Credenciales:** `admin` / `admin123`
+
+### Flujo sugerido de prueba (15 min)
+1. **Login** → verifica el dashboard ejecutivo (KPIs por departamento)
+2. **POS** → vende un producto y un servicio (categoría 🛠️), imprime el ticket
+3. **Inventario** → verifica que el stock bajó tras la venta, registra una reposición
+4. **Compras** → crea requisición → emite PO → recibe mercancía (stock sube) → evalúa proveedor ⭐
+5. **RRHH** → registra un empleado → crea contrato → evalúa desempeño 📊 → procesa una terminación (calcula liquidación LOTTT)
+6. **Nómina** → calcula nómina del mes (IVSS/FAOV/INCE/ISLR) → imprime comprobante
+7. **Contabilidad** → revisa Libro Diario (asientos automáticos), Balance General (debe cuadrar), IVA
+8. **Reportes** → exporta CSV, envía reporte ejecutivo por email (configúralo en Ajustes)
+9. **🔐 Secreto:** presiona **Ctrl+Alt+A** y revisa el historial forense — cada acción anterior debe estar registrada
+10. **Ajustes** → cambia moneda/nombre, exporta backup JSON
+
+### Bugs encontrados durante QA interna
+- ~~Overlay fantasma bloqueante~~ (corregido, commit 7e82889)
+- ~~Cierre anual con utilidad $0~~ (corregido: ingresos se debitaban con signo negativo)

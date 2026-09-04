@@ -43,6 +43,21 @@
       }
       const bar = UI.barChart(data7, 180);
 
+      // ===== 6.5: TENDENCIA MENSUAL (últimos 6 meses) =====
+      const monthly = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(); d.setMonth(d.getMonth() - i);
+        const m = d.getMonth(), y = d.getFullYear();
+        const sum = db.sales.filter(s => !s.cancelled && new Date(s.date).getMonth() === m && new Date(s.date).getFullYear() === y)
+          .reduce((a, s) => a + s.total, 0);
+        monthly.push({ label: d.toLocaleDateString('es', { month: 'short' }), value: +sum.toFixed(2) });
+      }
+      const trendChart = UI.barChart(monthly, 160);
+
+      // ===== 6.4: REPORTE POR EMAIL =====
+      const reportEmail = db.settings.reportEmail || '';
+      const emailBtn = '<button class="btn btn-outline" data-email-report>📧 Enviar reporte' + (reportEmail ? ' a ' + U.esc(reportEmail) : '') + '</button>';
+
       const perProduct = {};
       db.sales.filter(s => !s.cancelled).forEach(s => s.items.forEach(i => {
         perProduct[i.productId] = (perProduct[i.productId] || 0) + i.qty;
@@ -84,8 +99,38 @@
         '<div class="card"><div class="card-title">Ventas — últimos 7 días</div>' + bar + '</div>' +
         '<div class="card"><div class="card-title">Productos más vendidos</div>' + (top || '<div class="empty">Sin ventas aún</div>') + '</div>' +
         '</div>' +
+        '<div class="card"><div class="card-title">📈 Tendencia mensual — últimos 6 meses ' + emailBtn + '</div>' + trendChart + '</div>' +
         '<div class="card"><div class="card-title">Productos bajo stock (' + bajoStock.length + ')</div>' +
         (bajoStock.length ? U.table(['Producto', 'Stock', 'Mínimo'], lowRows ? [lowRows] : [], '') : '<div class="empty">Todo en niveles óptimos ✓</div>') + '</div>';
+    },
+    mount(ctx, el) {
+      // 6.4: Reporte por email (mailto con resumen ejecutivo)
+      el.querySelectorAll('[data-email-report]').forEach(b => b.addEventListener('click', () => {
+        const db = Store.get();
+        const to = db.settings.reportEmail || '';
+        if (!to) {
+          UI.toast('Configure el email en Ajustes → Datos del negocio', 'warn');
+          return;
+        }
+        const ventasHoy = db.sales.filter(s => !s.cancelled && new Date(s.date).toDateString() === new Date().toDateString());
+        const totalHoy = ventasHoy.reduce((a, s) => a + s.total, 0);
+        const ventasMes = db.sales.filter(s => !s.cancelled && new Date(s.date).getMonth() === new Date().getMonth());
+        const totalMes = ventasMes.reduce((a, s) => a + s.total, 0);
+        const bajoStock = (db.products || []).filter(p => p.stock <= p.stockMin).length;
+        const subject = encodeURIComponent('📊 NEOINVENT — Reporte ejecutivo ' + new Date().toLocaleDateString('es'));
+        const body = encodeURIComponent(
+          'REPORTE EJECUTIVO — ' + (db.settings.businessName || 'NEOINVENT') + '\n' +
+          'Fecha: ' + new Date().toLocaleString('es') + '\n\n' +
+          '📈 VENTAS\n• Hoy: ' + ventasHoy.length + ' ventas, ' + Utils.money(totalHoy) + '\n' +
+          '• Mes actual: ' + ventasMes.length + ' ventas, ' + Utils.money(totalMes) + '\n\n' +
+          '📦 INVENTARIO\n• Productos bajo stock: ' + bajoStock + '\n\n' +
+          '👥 RRHH\n• Empleados activos: ' + (db.employees || []).filter(e => e.status === 'ACTIVO').length + '\n\n' +
+          '🛠️ SERVICIO TI\n• WO abiertas: ' + (db.workOrders || []).filter(w => w.status !== 'RESUELTA' && w.status !== 'CERRADA').length + '\n\n' +
+          '— Generado automáticamente por NEOINVENT'
+        );
+        window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+        Store.logEvent('EXPORT', 'reportes', 'Reporte ejecutivo enviado a ' + to, ctx.currentUser?.username);
+      }));
     },
   };
 

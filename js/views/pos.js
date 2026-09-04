@@ -18,12 +18,17 @@
           '<strong>' + U.esc(p.name) + '</strong><div class="pos-price">' + U.money(p.price) + '</div>' +
           '<div class="pos-stock">Stock: ' + p.stock + '</div></button>';
       }).join('');
+      // FASE 5.5: servicios vendibles en POS (sin stock)
+      const svcs = (db.services || []).map(s =>
+        '<button class="pos-item" data-add="' + s.id + '" data-svc="1">' +
+        '<strong>🛠️ ' + U.esc(s.nombre) + '</strong><div class="pos-price">' + U.money(s.precio) + '</div>' +
+        '<div class="pos-stock">Servicio</div></button>').join('');
       const custOpts = db.customers.map(c => '<option value="' + c.id + '">' + U.esc(c.name) + '</option>').join('');
       return '<div class="pos-layout">' +
         '<div class="pos-products"><div class="pos-tools">' +
-        '<input type="search" id="pos-search" class="input" placeholder="Buscar producto…">' +
-        '<select id="pos-cat" class="input"><option value="">Todas</option>' + cats + '</select></div>' +
-        '<div class="pos-grid" id="pos-grid">' + prods + '</div></div>' +
+        '<input type="search" id="pos-search" class="input" placeholder="Buscar producto o servicio…">' +
+        '<select id="pos-cat" class="input"><option value="">Todas</option><option value="__svc">🛠️ Servicios</option>' + cats + '</select></div>' +
+        '<div class="pos-grid" id="pos-grid">' + prods + svcs + '</div></div>' +
 
         '<div class="pos-cart">' +
         '<div class="cart-head"><h3>Ticket / Carrito</h3><button class="icon-btn danger" data-clear title="Vaciar">🗑</button></div>' +
@@ -56,13 +61,19 @@
       function filter() {
         const q = search.value.trim().toLowerCase();
         const c = catSel.value;
-        const list = Store.get().products.filter(p =>
-          (!c || p.categoryId === c) && (!q || p.name.toLowerCase().includes(q)));
+        let list;
+        if (c === '__svc') {
+          list = (Store.get().services || []).filter(s => !q || s.nombre.toLowerCase().includes(q))
+            .map(s => ({ id: s.id, name: s.nombre, price: s.precio, svc: true }));
+        } else {
+          list = Store.get().products.filter(p =>
+            (!c || p.categoryId === c) && (!q || p.name.toLowerCase().includes(q)));
+        }
         grid.innerHTML = list.map(p => {
-          const out = p.stock <= 0;
-          return '<button class="pos-item' + (out ? ' out' : '') + '" data-add="' + p.id + '"' + (out ? ' disabled' : '') + '>' +
-            '<strong>' + U.esc(p.name) + '</strong><div class="pos-price">' + U.money(p.price) + '</div>' +
-            '<div class="pos-stock">Stock: ' + p.stock + '</div></button>';
+          const out = !p.svc && p.stock <= 0;
+          return '<button class="pos-item' + (out ? ' out' : '') + '" data-add="' + p.id + '"' + (p.svc ? ' data-svc="1"' : '') + (out ? ' disabled' : '') + '>' +
+            '<strong>' + (p.svc ? '🛠️ ' : '') + U.esc(p.name) + '</strong><div class="pos-price">' + U.money(p.price) + '</div>' +
+            '<div class="pos-stock">' + (p.svc ? 'Servicio' : 'Stock: ' + p.stock) + '</div></button>';
         }).join('');
       }
       search.addEventListener('input', filter);
@@ -87,10 +98,19 @@
     row.qty += delta;
     const p = Store.productById(pid);
     if (row.qty <= 0) cart = cart.filter(c => c !== row);
-    else if (p && row.qty > p.stock) { row.qty = p.stock; UI.toast('Stock máximo disponible', 'warn'); }
+    else if (!row.isService && p && row.qty > p.stock) { row.qty = p.stock; UI.toast('Stock máximo disponible', 'warn'); }
   }
 
   function add(pid, ctx, el) {
+    // FASE 5.5: buscar primero en servicios, luego en productos
+    const svc = (Store.get().services || []).find(s => s.id === pid);
+    if (svc) {
+      const row = cart.find(c => c.productId === pid);
+      if (row) row.qty++;
+      else cart.push({ productId: svc.id, name: svc.nombre, price: svc.precio, cost: 0, isService: true, qty: 1 });
+      renderCart(ctx, el);
+      return;
+    }
     const p = Store.productById(pid);
     if (!p || p.stock <= 0) return;
     const row = cart.find(c => c.productId === pid);
@@ -138,7 +158,9 @@
   function checkout(ctx, el) {
     if (!cart.length) return UI.toast('El carrito está vacío', 'warn');
     const db = Store.get();
+    // Validar stock solo de productos (los servicios no tienen stock)
     for (const c of cart) {
+      if (c.isService) continue;
       const p = Store.productById(c.productId);
       if (!p || p.stock < c.qty) { UI.toast('Stock insuficiente: ' + p.name, 'warn'); return; }
     }
@@ -153,11 +175,13 @@
       user: ctx.currentUser.username,
       subtotal: +subtotal.toFixed(2), tax: +tax.toFixed(2), discount: +disc.toFixed(2), total: +total.toFixed(2),
       cancelled: false,
-      items: cart.map(c => ({ productId: c.productId, qty: c.qty, price: c.price, cost: c.cost })),
+      items: cart.map(c => ({ productId: c.productId, name: c.name, qty: c.qty, price: c.price, cost: c.cost, isService: !!c.isService })),
     };
     db.sales.push(sale);
+    // Descontar stock solo de productos; los servicios no tocan inventario
+    cart.forEach(c => { if (!c.isService) Store.adjustStock(c.productId, 'salida', c.qty, 'Venta ' + sale.folio, ctx.currentUser.username); });
+    if (cart.some(c => c.isService)) Store.logEvent('CREATE', 'servicios', 'Servicio(s) vendido(s) en ' + sale.folio, ctx.currentUser.username);
     Store.logEvent('CREATE', 'ventas', 'Venta ' + sale.folio + ' registrada: ' + U.money(sale.total) + ' (' + sale.method + ')', ctx.currentUser.username);
-    cart.forEach(c => Store.adjustStock(c.productId, 'salida', c.qty, 'Venta ' + sale.folio, ctx.currentUser.username));
     Store.persist();
     printReceipt(sale);
     UI.toast('Venta ' + sale.folio + ' registrada', 'success');

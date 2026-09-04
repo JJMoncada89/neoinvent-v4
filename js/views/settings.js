@@ -27,6 +27,7 @@
         U.field('Alerta stock bajo', '<input type="number" min="0" name="lowStockThreshold" value="' + s.lowStockThreshold + '">') +
         '</div>' +
         U.field('Pie de ticket', '<input type="text" name="receiptFooter" value="' + U.esc(s.receiptFooter || '') + '">') +
+        U.field('Email para reportes ejecutivos', '<input type="email" name="reportEmail" value="' + U.esc(s.reportEmail || '') + '" placeholder="gerencia@empresa.com">') +
         '<div class="modal-actions"><button type="submit" class="btn btn-primary">Guardar ajustes</button></div></form></div>' +
 
         '<div class="card"><div class="card-title">Seguridad & datos</div>' +
@@ -54,6 +55,7 @@
           businessName: f.get('businessName').trim(), currency: f.get('currency'),
           taxRate: Utils.num(f.get('taxRate')), lowStockThreshold: Utils.num(f.get('lowStockThreshold')),
           receiptFooter: f.get('receiptFooter').trim(),
+          reportEmail: f.get('reportEmail').trim(),
         });
         Store.persist(); UI.toast('Ajustes guardados', 'success');
       });

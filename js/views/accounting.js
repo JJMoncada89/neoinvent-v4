@@ -86,13 +86,16 @@
         '<option value="pnl">📈 Estado de Resultados</option>' +
         '<option value="iva">🏛️ Declaración IVA</option>' +
         '<option value="coa">📋 Plan de Cuentas</option>' +
+        '<option value="mayor">📘 Libro Mayor</option>' +
         '</select>' +
+        '<button class="btn btn-danger btn-sm" data-close-year>🔒 Cierre anual</button>' +
         '<span class="pill pill-in">Asientos automáticos VENTA/COMPRA/NOMINA</span>' +
         '</div></div>' +
         '<div id="acc-body"></div>';
     },
     mount(ctx, el) {
       const body = el.querySelector('#acc-body');
+      el.querySelector('[data-close-year]').addEventListener('click', () => closeYear(ctx, el));
       const renderView = (v) => {
         const entries = buildLocalEntries();
         if (v === 'journal') {
@@ -158,6 +161,10 @@
             '<div class="card"><div class="card-title">Resumen periodo ' + String(mes).padStart(2, '0') + '/' + anio + '</div>' +
             '<p style="color:var(--text-muted);font-size:12.5px">Resumen informativo para la declaración mensual de IVA. Verifique con su contador y el formulario vigente del SENIAT antes de declarar.</p></div>';
         }
+        if (v === 'mayor') {
+          renderMayor(el, entries);
+          return;
+        }
         if (v === 'coa') {
           const saldos = computeSaldoCuentas(entries);
           const rows = COA.map(c => {
@@ -176,4 +183,76 @@
   };
 
   App.register('accounting', def);
+
+// ===== 4.5 LIBRO MAYOR =====
+function renderMayor(el, entries) {
+  const byAccount = {};
+  entries.forEach(e => e.lines.forEach(l => {
+    const key = l.code;
+    byAccount[key] = byAccount[key] || { code: l.code, name: l.name, lines: [] };
+    byAccount[key].lines.push({ fecha: e.fecha, ref: e.ref || e.source, debit: l.debit || 0, credit: l.credit || 0 });
+  }));
+  const accounts = Object.values(byAccount).filter(a => a.lines.length > 0).sort((a, b) => a.code.localeCompare(b.code));
+  const html = accounts.map(a => {
+    let running = 0;
+    const rows = a.lines.map(l => {
+      running += l.debit - l.credit;
+      return '<tr><td>' + U.fmtDateStr(l.fecha) + '</td><td>' + U.esc(l.ref) + '</td>' +
+        '<td class="num">' + (l.debit ? U.money(l.debit) : '') + '</td>' +
+        '<td class="num">' + (l.credit ? U.money(l.credit) : '') + '</td>' +
+        '<td class="num"><strong>' + U.money(running) + '</strong></td></tr>';
+    }).join('');
+    return '<tr><td colspan="5" style="background:var(--neutral-50)"><strong>' + a.code + ' — ' + U.esc(a.name) + '</strong></td></tr>' + rows;
+  }).join('');
+  el.querySelector('#acc-body').innerHTML = '<div class="card"><div class="card-title">Libro Mayor (' + accounts.length + ' cuentas con movimiento)</div>' +
+    (accounts.length ? '<div class="table-wrap"><table class="table"><thead><tr><th>Fecha</th><th>Referencia</th><th>Débito</th><th>Crédito</th><th>Saldo</th></tr></thead><tbody>' + html + '</tbody></table></div>' : '<div class="empty">Sin movimientos.</div>') + '</div>';
+}
+
+// ===== 4.5 CIERRE ANUAL =====
+function closeYear(ctx, el) {
+  const db = Store.get();
+  const year = new Date().getFullYear();
+  if (!confirm('🔒 ¿Generar asiento de cierre ' + year + '?\nLos ingresos y gastos se transferirán a Utilidades Retenidas (3.1.2.01).')) return;
+
+  const entries = buildLocalEntries();
+  const saldos = computeSaldoCuentas(entries);
+  const lines = [];
+
+  // Ingresos: saldo natural ACREEDOR (saldo negativo en convención débito-crédito) → se DEBITAN |saldo| para cerrar
+  saldos.filter(a => a.type === 'INGRESO' && Math.abs(a.saldo) > 0.001).forEach(a => {
+    lines.push({ code: a.code, name: a.name, debit: Math.abs(a.saldo), credit: 0 });
+  });
+  // Gastos: saldo natural DEUDOR (positivo) → se ACREDITAN para cerrar
+  saldos.filter(a => a.type === 'GASTO' && Math.abs(a.saldo) > 0.001).forEach(a => {
+    lines.push({ code: a.code, name: a.name, debit: 0, credit: a.saldo });
+  });
+
+  if (!lines.length) return UI.toast('No hay ingresos ni gastos que cerrar', 'warn');
+
+  const totalIngresos = lines.filter(l => l.debit > 0).reduce((a, l) => a + l.debit, 0);
+  const totalGastos = lines.filter(l => l.credit > 0).reduce((a, l) => a + l.credit, 0);
+  const utilidad = +(totalIngresos - totalGastos).toFixed(2);
+
+  // Contrapartida: utilidad (o pérdida) a Utilidades Retenidas
+  if (utilidad >= 0) lines.push({ code: '3.1.2.01', name: 'Utilidades retenidas', debit: 0, credit: utilidad });
+  else lines.push({ code: '3.1.2.01', name: 'Utilidades retenidas', debit: Math.abs(utilidad), credit: 0 });
+
+  // Validación de cuadratura (misma regla que los asientos del backend)
+  const sumD = +lines.reduce((a, l) => a + (l.debit || 0), 0).toFixed(2);
+  const sumC = +lines.reduce((a, l) => a + (l.credit || 0), 0).toFixed(2);
+  if (Math.abs(sumD - sumC) > 0.01) {
+    return UI.toast('⚠️ Asiento de cierre descuadrado (' + U.money(sumD) + ' vs ' + U.money(sumC) + ') — no se guardó', 'error');
+  }
+
+  // Guardar asiento de cierre en BD local + auditoría forense
+  db.accountingCloses = db.accountingCloses || [];
+  const close = { id: K('close'), year, lines, utilidad: +utilidad.toFixed(2), fecha: new Date().toISOString(), user: ctx.currentUser?.username };
+  db.accountingCloses.push(close);
+  Store.persist();
+  Store.logEvent('CREATE', 'contabilidad-cierre', 'Cierre anual ' + year + ': utilidad ' + U.money(utilidad), ctx.currentUser?.username);
+
+  el.querySelector('#acc-view').value = 'mayor';
+  UI.toast('✅ Cierre ' + year + ' generado. Utilidad: ' + U.money(utilidad), 'success');
+  ctx.reload();
+}
 })();
