@@ -143,3 +143,21 @@ Hecho para ser simple, vendible y que **nunca vuelva a romper un deploy**. 👑
 ### Bugs encontrados durante QA interna
 - ~~Overlay fantasma bloqueante~~ (corregido, commit 7e82889)
 - ~~Cierre anual con utilidad $0~~ (corregido: ingresos se debitaban con signo negativo)
+
+## 🔐 Usuarios multi-admin / multi-vendedor (fix)
+
+**Síntoma reportado:** los usuarios creados desde Ajustes no se podían editar y los admins/vendedores nuevos no podían iniciar sesión desde otro navegador en Render.
+
+**Causa raíz:** el login y la gestión de usuarios vivían solo en el `localStorage` de cada navegador (modo demo offline). Cada navegador tenía sus propios usuarios — el creado en una máquina no existía en la otra.
+
+**Solución implementada (modo dual):**
+1. **`js/api.js`** — cliente API inteligente: si el backend PostgreSQL está disponible, crea/edita/elimina/loguea contra PostgreSQL (compartido por todos los navegadores). Si no hay backend, cae a localStorage (demo offline).
+2. **Edición de usuarios** — nueva ✎ en la tabla de usuarios: cambia nombre, rol (admin/cajero/vendedor) y contraseña opcional.
+3. **Login por username o email** en el backend.
+4. **Seed automático** — `npm run seed` crea el admin inicial si no existe.
+
+### Cómo conectarlo en Render (para multi-dispositivo REAL)
+1. Asegúrate de tener el **Web Service del backend** (Node) + **PostgreSQL** desplegados (render.yaml incluido).
+2. Ejecuta en la consola del Web Service: `npm run migrate` y luego `npm run seed`.
+3. En el frontend → **Ajustes → URL del backend**: pega `https://tu-backend.onrender.com` y pulsa Enter.
+4. A partir de ahí, **todos** los usuarios (admin/vendedor/cajero) creados quedan en PostgreSQL y entran desde **cualquier** navegador.
