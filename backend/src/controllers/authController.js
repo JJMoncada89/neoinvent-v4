@@ -73,17 +73,18 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const usuario = req.body.username || req.body.identificador || null;
 
-    if (!email || !password) {
+    if ((!email && !usuario) || !password) {
       return res.status(400).json({
-        error: 'Email y password son obligatorios',
+        error: 'Usuario/email y password son obligatorios',
       });
     }
 
-    // Buscar usuario
+    // Buscar por email (el identificador de acceso se almacena en la columna email)
     const result = await pool.query(
       'SELECT * FROM usuarios WHERE email = $1',
-      [email]
+      [email || usuario]
     );
 
     if (result.rows.length === 0) {
@@ -93,6 +94,11 @@ export const login = async (req, res) => {
     }
 
     const user = result.rows[0];
+
+    // Verificar cuenta activa
+    if (user.activo === false) {
+      return res.status(403).json({ error: 'Usuario desactivado' });
+    }
 
     // Comparar contraseña
     const passwordValid = await bcrypt.compare(password, user.password_hash);
@@ -116,7 +122,13 @@ export const login = async (req, res) => {
     res.json({
       message: 'Login exitoso',
       token,
-      user: userData,
+      user: {
+        ...userData,
+        username: user.email,
+        name: user.nombre,
+        email: user.email,
+        role: user.rol,
+      },
     });
   } catch (error) {
     console.error('❌ Error en login:', error.message);

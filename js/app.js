@@ -31,12 +31,18 @@
   }
   function logout() {
     session = null;
-    Store.logEvent('LOGOUT', 'auth', 'Cierre de sesión', session?.username || 'unknown');
+    Store.logEvent('LOGOUT', 'auth', 'Cierre de sesión', localStorage.getItem('neoinvent_v4_session') ? 'sesion previa' : 'unknown');
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('neoinvent_jwt');
     location.hash = '';
     appEl().hidden = true;
     loginScreen().hidden = false;
     contentEl().innerHTML = '';
+    // Limpiar campos del login (evita concatenación de credenciales viejas)
+    const uField = document.getElementById('login-username');
+    const pField = document.getElementById('login-password');
+    if (uField) uField.value = '';
+    if (pField) pField.value = '';
   }
   function currentUser() { return session; }
 
@@ -105,22 +111,43 @@
     if (window.scrollTo) window.scrollTo(0, 0);
   }
 
-  // ---------- Login ----------
-  function doLogin(e) {
+  // ---------- Login (dual: backend PostgreSQL si está, fallback local) ----------
+  async function doLogin(e) {
     e.preventDefault();
     const u = document.getElementById('login-username').value.trim();
     const p = document.getElementById('login-password').value;
     const err = document.getElementById('login-error');
-    const dbU = Store.get().users.find(x => x.username === u && x.password === p);
-    if (!dbU) {
-      err.textContent = 'Usuario o contraseña incorrectos';
-      err.hidden = false;
-      return;
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true; btn.textContent = 'Verificando…';
+
+    try {
+      // 1º intentar backend
+      const res = await API.login(u, p);
+      if (res.source === 'backend' && res.ok) {
+        const dbU = res.user;
+        authSession({ id: dbU.id, username: dbU.username || dbU.email, name: dbU.nombre, role: dbU.rol });
+        localStorage.setItem('neoinvent_jwt', res.token || '');
+        Store.logEvent('LOGIN', 'auth', 'Inicio de sesión exitoso (backend)', dbU.username || dbU.email);
+        err.hidden = true;
+        enterApp();
+        return;
+      }
+
+      // 2º fallback local (offline / sin backend configurado)
+      const dbU = Store.get().users.find(x => x.username === u && x.password === p);
+      if (!dbU) {
+        err.textContent = 'Usuario o contraseña incorrectos';
+        err.hidden = false;
+        btn.disabled = false; btn.textContent = 'Iniciar sesión';
+        return;
+      }
+      err.hidden = true;
+      authSession({ id: dbU.id, username: dbU.username, name: dbU.name, role: dbU.role });
+      Store.logEvent('LOGIN', 'auth', 'Inicio de sesión exitoso (local)', dbU.username);
+      enterApp();
+    } finally {
+      btn.disabled = false; btn.textContent = 'Iniciar sesión';
     }
-    err.hidden = true;
-    authSession({ id: dbU.id, username: dbU.username, name: dbU.name, role: dbU.role });
-    Store.logEvent('LOGIN', 'auth', 'Inicio de sesión exitoso', dbU.username);
-    enterApp();
   }
 
   function enterApp() {
