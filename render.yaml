@@ -12,10 +12,9 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm install
-    startCommand: node server.js
+    # Free tier no soporta preDeployCommand → migraciones en el start (idempotentes)
+    startCommand: npm run migrate && npm run seed && node server.js
     healthCheckPath: /health
-    # Corre DESPUÉS del build y ANTES de arrancar: crea tablas + admin inicial
-    preDeployCommand: npm run migrate && npm run seed
     envVars:
       - key: NODE_ENV
         value: production
@@ -45,18 +44,10 @@ services:
         value: +58 212 0000000
       - key: UT_VALUE
         value: 100
-      # CORS: permitimos el dominio del frontend (inyectado por Render)
+      # CORS abierto (la API pública usa JWT para mutaciones)
       - key: CORS_ORIGIN
-        fromService:
-          type: web
-          name: neoinvent-frontend
-          property: url
-      # URL pública del frontend para reportes/emails
-      - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: neoinvent-frontend
-          property: url
+        value: '*'
+      # URL del backend — se construye en el build del frontend via host
     plan: free
 
   # ---------- FRONTEND (Static Site — PWA) ----------
@@ -66,12 +57,12 @@ services:
     rootDir: .
     buildCommand: |
       set -e
-      # Inyecta la URL del backend en el cliente API (placeholder → URL real)
-      if [ -n "$VITE_API_URL" ]; then
-        sed -i "s|__API_URL__|$VITE_API_URL|g" js/api.js
-        echo "API inyectada: $VITE_API_URL"
+      # Inyecta la URL del backend (construida desde el host del servicio API)
+      if [ -n "$VITE_API_HOST" ]; then
+        sed -i "s|__API_URL__|https://$VITE_API_HOST|g" js/api.js
+        echo "API inyectada: https://$VITE_API_HOST"
       else
-        echo "Sin VITE_API_URL — el frontend usará modo local/demo"
+        echo "Sin VITE_API_HOST — el frontend usará modo local/demo"
       fi
     staticPublishPath: .
     headers:
@@ -83,11 +74,11 @@ services:
         source: /*
         destination: /index.html
     envVars:
-      - key: VITE_API_URL
+      - key: VITE_API_HOST
         fromService:
           type: web
           name: neoinvent-api
-          property: url
+          property: host
     plan: free
 
 # ---------- BASE DE DATOS (PostgreSQL free) ----------
