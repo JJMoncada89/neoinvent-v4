@@ -1,69 +1,25 @@
 # ============================================================
-# NEOINVENT ENTERPRISE — Render Blueprint (deploy TODO automático)
-# Conecta tu repo a Render → New → Blueprint → selecciona este repo.
-# Render crea SOLO: PostgreSQL + Backend (Web Service) + Frontend (Static).
-# En cada push, re-despliega ambos automáticamente.
+# NEOINVENT ENTERPRISE — Render Blueprint
+# Conecta tu repo a Render → New → Blueprint → este repo.
+#
+# IMPORTANTE: Render ELIMINÓ el plan free para Web Services (Node).
+# Este blueprint despliega SOLO el frontend (Static Site, gratis siempre).
+#
+# El frontend funciona 100% standalone (localStorage) con todos los módulos.
+# El backend está en /backend/ listo para desplegar en:
+#   - Render Starter ($7/mes) — quita los comentarios del bloque backend abajo
+#   - Alternativas gratis: Fly.io, Railway, Koyeb, Glitch
+#
+# La app detecta automáticamente si hay backend y cambia de modo.
 # ============================================================
 
 services:
-  # ---------- BACKEND (API Node.js + PostgreSQL) ----------
-  - type: web
-    name: neoinvent-api
-    runtime: node
-    rootDir: backend
-    buildCommand: npm install
-    # Free tier no soporta preDeployCommand → migraciones en el start (idempotentes)
-    startCommand: npm run migrate && npm run seed && node server.js
-    healthCheckPath: /health
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        value: 10000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: neoinvent-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
-      - key: MASTER_AUDIT_KEY_HASH
-        sync: false
-      - key: ADMIN_EMAIL
-        value: admin@neoinvent.local
-      - key: ADMIN_PASSWORD
-        value: admin123
-      - key: ADMIN_NAME
-        value: Administrador
-      - key: SENIAT_RIF
-        value: J-99999999-0
-      - key: EMPRESA_NOMBRE
-        value: NEOINVENT Enterprise C.A.
-      - key: EMPRESA_DIRECCION
-        value: Caracas, Venezuela
-      - key: EMPRESA_TELEFONO
-        value: +58 212 0000000
-      - key: UT_VALUE
-        value: 100
-      # CORS abierto (la API pública usa JWT para mutaciones)
-      - key: CORS_ORIGIN
-        value: '*'
-      # URL del backend — se construye en el build del frontend via host
-    plan: free
-
-  # ---------- FRONTEND (Static Site — PWA) ----------
+  # ---------- FRONTEND (Static Site — PWA, gratis siempre) ----------
   - type: web
     name: neoinvent-frontend
     runtime: static
     rootDir: .
-    buildCommand: |
-      set -e
-      # Inyecta la URL del backend (construida desde el host del servicio API)
-      if [ -n "$VITE_API_HOST" ]; then
-        sed -i "s|__API_URL__|https://$VITE_API_HOST|g" js/api.js
-        echo "API inyectada: https://$VITE_API_HOST"
-      else
-        echo "Sin VITE_API_HOST — el frontend usará modo local/demo"
-      fi
+    buildCommand: echo "Frontend vanilla JS — sin build step"
     staticPublishPath: .
     headers:
       - path: /*
@@ -73,19 +29,46 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-    envVars:
-      - key: VITE_API_HOST
-        fromService:
-          type: web
-          name: neoinvent-api
-          property: host
     plan: free
 
-# ---------- BASE DE DATOS (PostgreSQL free) ----------
-databases:
-  - name: neoinvent-db
-    plan: free
-    databaseName: neoinvent
-    user: neoinvent
-    # Render genera la contraseña; se inyecta en DATABASE_URL del backend
-    ipAllowList: []
+  # ============================================================
+  # BACKEND: descomenta este bloque SOLO si tienes plan Starter ($7/mes)
+  # o despliega /backend/ en una alternativa gratis (Fly.io, Koyeb).
+  # La app detecta el backend automáticamente en Ajustes → URL del backend.
+  # ============================================================
+  # - type: web
+  #   name: neoinvent-api
+  #   runtime: node
+  #   rootDir: backend
+  #   buildCommand: npm install
+  #   startCommand: npm run migrate && npm run seed && node server.js
+  #   healthCheckPath: /health
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: DATABASE_URL
+  #       fromDatabase:
+  #         name: neoinvent-db
+  #         property: connectionString
+  #     - key: JWT_SECRET
+  #       generateValue: true
+  #     - key: MASTER_AUDIT_KEY_HASH
+  #       sync: false
+  #     - key: ADMIN_EMAIL
+  #       value: admin@neoinvent.local
+  #     - key: ADMIN_PASSWORD
+  #       value: admin123
+  #     - key: SENIAT_RIF
+  #       value: J-99999999-0
+  #     - key: EMPRESA_NOMBRE
+  #       value: NEOINVENT Enterprise C.A.
+  #     - key: CORS_ORIGIN
+  #       value: '*'
+  #   plan: starter
+
+# ---------- BASE DE DATOS (descomenta si activas el backend) ----------
+# databases:
+#   - name: neoinvent-db
+#     plan: free
+#     databaseName: neoinvent
+#     user: neoinvent
