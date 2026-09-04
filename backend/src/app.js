@@ -14,6 +14,8 @@ import reportRoutes from './routes/reports.js';
 import fiscalRoutes from './routes/fiscal.js';
 import auditRoutes from './routes/audit.js';
 import hrRoutes from './routes/hr.js';
+import payrollRoutes from './routes/payroll.js';
+import purchaseRoutes from './routes/purchases.js';
 
 dotenv.config();
 
@@ -42,6 +44,8 @@ app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/fiscal', fiscalRoutes);
 app.use('/api/v1/audit', auditRoutes);
 app.use('/api/v1/hr', hrRoutes);
+app.use('/api/v1/hr/payroll', payrollRoutes);
+app.use('/api/v1/purchases', purchaseRoutes);
 
 // 404
 app.use((req, res) => {

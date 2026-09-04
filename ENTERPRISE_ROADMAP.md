@@ -52,10 +52,19 @@
   - Máximo 5000 eventos con timestamp exacto, user, device
 - [ ] **1.6** Exportación forense CSV full desde backend (parcial: local sí, backend requiere token)
 
-### 🔨 FASE 3 — RRHH — 60% COMPLETADA ✅
+### 🔨 FASE 2 — COMPRAS — 70% COMPLETADA ✅
+- [x] **2.1** Requisiciones de compra (frontend local + backend) ✅
+- [x] **2.2** Órdenes de compra (PO) con IVA 16% automático ✅
+- [x] **2.3** Recepción de mercancía que actualiza stock ✅
+- [x] **2.5** Proveedores reutilizados del módulo inventario ✅
+- [ ] **2.4** Evaluación de proveedores (rating) — pendiente
+
+### 🔨 FASE 3 — RRHH — 85% COMPLETADA ✅
 - [x] **3.1** Gestión de empleados (CRUD + seed demo) ✅
 - [x] **3.2** Contratos laborales (tipos LOTTT: FIJO, TEMPORAL, OBRA...) ✅
-- [ ] **3.3** Nómina (IVSS, FAOV, ISLR) — backend listo, front falta
+- [x] **3.3** Nómina con IVSS 4% + FAOV 2% + INCE 0.5% + ISLR progresivo UT ✅
+  - Backend: `payrollController.js` con `calcularISLR` por tramos UT + `runPayroll`
+  - Frontend: `js/views/payroll.js` con cálculo, comprobante imprimible y persistencia de corridas
 - [x] **3.4** Despidos/renuncias/terminaciones (tipos LOT) ✅
 - [ ] **3.5** Evaluaciones de desempeño
 
@@ -81,21 +90,21 @@ Al retomar la sesión, el estado se reconstruye así:
 1. **Repo**: `JJMoncada89/neoinvent-v4`, rama `main` HEAD `553e525`.
 2. **Backend** en `backend/`: Express + PG, rutas en `src/routes/`, controladores en `src/controllers/`. Esquema SQL en `src/config/schema.sql` (8+ tablas: usuarios, productos, ventas, venta_items, clientes, facturas_seniat, movimientos_inventario, categorías + employees, contracts, terminations, requisitions, POs, services + audit_trail).
 3. **Auditoría forense**: `backend/src/services/auditService.js` (hash-chain SHA-256), middleware `auditLog.js`, rutas `/api/v1/audit/*` con clave maestra `MASTER_AUDIT_KEY_HASH`. Frontend: `js/views/audit.js` + atajo `Ctrl+Alt+A` en `js/app.js`.
-4. **RRHH**: `backend/src/controllers/hrController.js` (empleados/contratos/terminaciones con cálculo LOTTT) + `js/views/hr.js`. Falta UI de nómina (IVSS 4% + FAOV 2% + ISLR) y evaluaciones.
-5. **Pendiente Fase 2 (Compras)**: extensiones de controllers/routes + vistas para requisiciones, órdenes de compra y recepción. Tablas ya en schema.
+4. **RRHH 85%**: `hrController.js` + `js/views/hr.js` (empleados/contratos/despidos) + `payrollController.js` + `js/views/payroll.js` (nómina IVSS/FAOV/INCE/ISLR).
+5. **Compras 70%**: `purchaseController.js` + `js/views/purchasing.js` (requisiciones→PO→recepción). Falta 2.4 evaluación de proveedores.
 6. **Pendiente Fase 4 (Contabilidad)**: plan de cuentas, asientos automáticos, balance, declaración IVA. 
 7. **Pendiente Fase 5**: servicios/activos TI/SLA. **Fase 6**: dashboard ejecutivo por departamento.
 8. **Gate de calidad**: ejecutar `node --check` en todo JS + test E2E `/tmp/vtest/browser_test.js` antes de cada push.
 
-Próximo milestone lógico: **UI de nómina venezolana** (mayor valor legal) o **Fase 2 compras** (mayor valor operativo).
+Próximo milestone lógico: **3.5 Evaluaciones de desempeño**, **2.4 Evaluación de proveedores**, o **Fase 4 Contabilidad** (asientos automáticos por venta/compras/nómina).
 
 ## PROGRESO
 | Fase | Estado | Progreso | Última actualización |
 |---|---|---|---|
 | 0 - Investigación | ✅ | 100% | 27-ago-2026 |
 | 1 - Auditoría Forense | 🔧 Casi completa | 90% | 27-ago-2026 |
-| 2 - Compras | ⏳ Pendiente | 0% | — |
-| 3 - RRHH | 🔧 En progreso | 60% | 27-ago-2026 |
+| 2 - Compras | 🔧 Casi completa | 70% | 27-ago-2026 |
+| 3 - RRHH | 🔧 Casi completa | 85% | 27-ago-2026 |
 | 4 - Contabilidad | ⏳ Pendiente | 0% | — |
 | 5 - Servicios | ⏳ Pendiente | 0% | — |
 | 6 - Dashboard | ⏳ Pendiente | 0% | — |

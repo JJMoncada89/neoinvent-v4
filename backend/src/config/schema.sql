@@ -132,6 +132,64 @@ CREATE TABLE IF NOT EXISTS services (
     activo BOOLEAN DEFAULT true,
     creado_en TIMESTAMP DEFAULT NOW()
 );
+);
+
+-- ================================================
+-- NÓMINA (Fase 3.3) — RSAI/VEN venezolana
+-- ================================================
+CREATE TABLE IF NOT EXISTS payroll_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    periodo VARCHAR(20) NOT NULL,           -- ej. 2026-08
+    fecha_inicio DATE,
+    fecha_fin DATE,
+    tipo VARCHAR(20) DEFAULT 'QUINCENAL',   -- QUINCENAL / MENSUAL
+    total_gross DECIMAL(14,2) DEFAULT 0,
+    total_deducciones DECIMAL(14,2) DEFAULT 0,
+    total_neto DECIMAL(14,2) DEFAULT 0,
+    estado VARCHAR(20) DEFAULT 'BORRADOR',  -- BORRADOR / PROCESADA / PAGADA
+    procesado_por UUID REFERENCES usuarios(id),
+    creado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT chk_payroll_estado CHECK (estado IN ('BORRADOR','PROCESADA','PAGADA'))
+);
+
+CREATE TABLE IF NOT EXISTS payroll_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    payroll_run_id UUID NOT NULL REFERENCES payroll_runs(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    salario_base DECIMAL(14,2) NOT NULL DEFAULT 0,
+    dias_trabajados INTEGER DEFAULT 30,
+    asignaciones JSONB DEFAULT '[]',        -- [{concepto, monto}]
+    horas_extra JSONB DEFAULT '[]',         -- [{tipo, horas, monto}]
+    bono_transporte DECIMAL(14,2) DEFAULT 0,
+    bono_alimentacion DECIMAL(14,2) DEFAULT 0,
+    total_asignaciones DECIMAL(14,2) DEFAULT 0,
+    retencion_ivss DECIMAL(14,2) DEFAULT 0,
+    retencion_faov DECIMAL(14,2) DEFAULT 0,
+    retencion_ince DECIMAL(14,2) DEFAULT 0,
+    retencion_islr DECIMAL(14,2) DEFAULT 0,
+    caja_ahorro DECIMAL(14,2) DEFAULT 0,
+    prestamos DECIMAL(14,2) DEFAULT 0,
+    otras_deducciones DECIMAL(14,2) DEFAULT 0,
+    total_deducciones DECIMAL(14,2) DEFAULT 0,
+    neto_pagar DECIMAL(14,2) DEFAULT 0,
+    creado_en TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_items_run ON payroll_items(payroll_run_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_items_emp ON payroll_items(employee_id);
+
+-- ================================================
+-- COMPRAS — RECEPCIONES (Fase 2.3)
+-- ================================================
+CREATE TABLE IF NOT EXISTS goods_receipts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    po_id UUID REFERENCES purchase_orders(id),
+    items JSONB DEFAULT '[]',               -- [{producto_id, solicitado, recibido, ok}]
+    received_by UUID REFERENCES usuarios(id),
+    qc_status VARCHAR(20) DEFAULT 'PENDIENTE',
+    observaciones TEXT,
+    creado_en TIMESTAMP DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
