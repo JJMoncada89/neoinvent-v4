@@ -14,8 +14,8 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health
-    # Se ejecuta DESPUÉS del deploy: crea tablas + admin inicial
-    postDeploy: npm run migrate && npm run seed
+    # Corre DESPUÉS del build y ANTES de arrancar: crea tablas + admin inicial
+    preDeployCommand: npm run migrate && npm run seed
     envVars:
       - key: NODE_ENV
         value: production
