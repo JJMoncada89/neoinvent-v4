@@ -31,6 +31,7 @@
   }
   function logout() {
     session = null;
+    Store.logEvent('LOGOUT', 'auth', 'Cierre de sesión', session?.username || 'unknown');
     localStorage.removeItem(SESSION_KEY);
     location.hash = '';
     appEl().hidden = true;
@@ -38,6 +39,21 @@
     contentEl().innerHTML = '';
   }
   function currentUser() { return session; }
+
+  // ---------- Atajo secreto: Ctrl+Alt+A → Auditoría Forense ----------
+  function setupSecretShortcut() {
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.altKey && (e.key === 'a' || e.key === 'A')) {
+        e.preventDefault();
+        if (!session) return; // requiere sesión
+        // Registrar intento de acceso al panel oculto
+        Store.logEvent('SECURITY', 'audit-access', 'Intento acceder a auditoría forense', session?.username || 'unknown');
+        location.hash = '#/audit';
+        goRoute();
+        UI.toast('Panel de auditoría', 'info');
+      }
+    });
+  }
 
   // ---------- Sidebar ----------
   const BUILD_MENU = [
@@ -47,6 +63,7 @@
     { id: 'sales', title: 'Ventas', icon: 'M13 2L3 14h6l-2 8 10-12h-6l2-8z' },
     { id: 'clients', title: 'Clientes', icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
     { id: 'reports', title: 'Reportes', icon: 'M21 12v-2a5 5 0 0 0-5-5H8a5 5 0 0 0-5 5v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2v-1a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v1a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2z' },
+    { id: 'hr', title: 'RRHH', icon: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
     { id: 'settings', title: 'Ajustes', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l1.7 1.3a1 1 0 0 1 .2 1.4l-1.6 2.7a1 1 0 0 1-1.3.4l-2-.9a7 7 0 0 1-2 .8l-.3 2.1a1 1 0 0 1-1 .8H9.3a1 1 0 0 1-1-.8l-.3-2.1a7 7 0 0 1-2-.8l-2 .9a1 1 0 0 1-1.3-.4L1.1 14a1 1 0 0 1 .2-1.4L3 11.3a7.6 7.6 0 0 1 0-1.7L1.3 8.3a1 1 0 0 1-.2-1.4l1.6-2.7a1 1 0 0 1 1.3-.5l2 .9a7 7 0 0 1 2-.8l.3-2.1a1 1 0 0 1 1-.8h3.2a1 1 0 0 1 1 .8l.3 2.1a7 7 0 0 1 2 .8l2-.9a1 1 0 0 1 1.3.5L19.6 7a1 1 0 0 1-.2 1.4L17.7 9.7' },
   ];
 
@@ -65,7 +82,7 @@
     const allowed = BUILD_MENU.map(m => m.id);
     let key = (location.hash || '#/dashboard').replace(/^#\//, '');
     let base = key.split('/')[0];
-    if (allowed.indexOf(base) === -1) base = 'dashboard';
+    if (allowed.indexOf(base) === -1 && base !== 'audit') base = 'dashboard'; // 'audit' es acceso oculto (Ctrl+Alt+A)
 
     topbarActions().innerHTML = '';
     const def = window.Views[base];
@@ -98,6 +115,7 @@
     }
     err.hidden = true;
     authSession({ id: dbU.id, username: dbU.username, name: dbU.name, role: dbU.role });
+    Store.logEvent('LOGIN', 'auth', 'Inicio de sesión exitoso', dbU.username);
     enterApp();
   }
 
@@ -134,6 +152,7 @@
       if (ev.target === document.getElementById('modal-overlay')) UI.closeModal();
     });
     window.addEventListener('hashchange', goRoute);
+    setupSecretShortcut();
 
     const saved = localStorage.getItem(SESSION_KEY);
     if (saved) {

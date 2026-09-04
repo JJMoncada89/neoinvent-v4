@@ -156,6 +156,7 @@
       items: cart.map(c => ({ productId: c.productId, qty: c.qty, price: c.price, cost: c.cost })),
     };
     db.sales.push(sale);
+    Store.logEvent('CREATE', 'ventas', 'Venta ' + sale.folio + ' registrada: ' + U.money(sale.total) + ' (' + sale.method + ')', ctx.currentUser.username);
     cart.forEach(c => Store.adjustStock(c.productId, 'salida', c.qty, 'Venta ' + sale.folio, ctx.currentUser.username));
     Store.persist();
     printReceipt(sale);

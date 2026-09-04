@@ -16,6 +16,8 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: MASTER_AUDIT_KEY_HASH
+        sync: false
       - key: SENIAT_RIF
         sync: false
       - key: EMPRESA_NOMBRE

@@ -41,6 +41,12 @@
     ],
     sales: [],       // ventas (incluye líneas de items)
     movements: [],   // kardex: entradas/salidas de stock
+    employees: [     // RRHH
+      { id: 'emp1', first_name: 'María', last_name: 'González', cedula: 'V-12456789', department: 'Ventas', position: 'Cajera', base_salary: 1800, hire_date: '2023-05-15', status: 'ACTIVO' },
+      { id: 'emp2', first_name: 'José', last_name: 'Pérez', cedula: 'V-23456789', department: 'Inventario', position: 'Almacenista', base_salary: 1500, hire_date: '2024-02-01', status: 'ACTIVO' },
+    ],
+    contracts: [],   // contratos laborales
+    terminations: [], // despidos/renuncias
     nextSaleSeq: 0,
     version: 4,
   };
@@ -79,6 +85,35 @@
     return load(); // inicialización perezosa
   }
 
+  // ---------- HISTORIAL OCULTO / AUDITORÍA LOCAL ----------
+  // Cada evento del sistema queda registrado aquí con timestamp exacto
+  const EVENTS_KEY = 'neoinvent_v4_events';
+
+  function logEvent(action, module, detail, user) {
+    try {
+      const events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');
+      events.push({
+        id: uid('ev'),
+        action,
+        module,
+        detail: detail || '',
+        user: user || (() => { try { return JSON.parse(localStorage.getItem('neoinvent_v4_session'))?.username } catch { return 'unknown'; } })(),
+        time: new Date().toISOString(),
+        device: navigator.userAgent ? navigator.userAgent.slice(0, 150) : 'unknown',
+      });
+      // Máximo 5000 eventos locales
+      if (events.length > 5000) events.splice(0, events.length - 5000);
+      localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getLocalEvents() {
+    return JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');
+  }
+
   function persist() {
     localStorage.setItem(DB_KEY, JSON.stringify(db));
   }
@@ -88,6 +123,9 @@
     if (!Array.isArray(db.providers)) db.providers = [];
     if (!Array.isArray(db.movements)) db.movements = [];
     if (!Array.isArray(db.sales)) db.sales = [];
+    if (!Array.isArray(db.employees)) db.employees = [];
+    if (!Array.isArray(db.contracts)) db.contracts = [];
+    if (!Array.isArray(db.terminations)) db.terminations = [];
     if (typeof db.nextSaleSeq !== 'number') db.nextSaleSeq = 0;
   }
 
@@ -125,12 +163,16 @@
       type, qty, ref: ref || '', user: user || 'sistema',
     });
     persist();
+    // AUDITORÍA OCULTA: registrar el movimiento exacto
+    logEvent(type === 'salida' ? 'UPDATE' : 'CREATE', 'inventario',
+      (type === 'salida' ? 'Salida de stock: ' : 'Entrada de stock: ') + p.name + ' × ' + qty + (ref ? ' (' + ref + ')' : ''), user);
     return p;
   }
 
   global.Store = {
     DB_KEY, load, persist, reset, uid, deepClone,
     get, categoryName, providerName, productById, customerById, adjustStock,
+    logEvent, getLocalEvents,
   };
 
   // Sembrar/leer base al cargar el módulo
