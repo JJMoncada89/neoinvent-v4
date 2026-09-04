@@ -122,6 +122,85 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 -- ================================================
 -- SERVICIOS (Fase 5)
 -- ================================================
+-- ================================================
+-- CONTABILIDAD (Fase 4) — Plan de Cuentas y Libro Diario
+-- ================================================
+CREATE TABLE IF NOT EXISTS chart_of_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(20) NOT NULL,          -- ACTIVO / PASIVO / PATRIMONIO / INGRESO / GASTO
+    parent_code VARCHAR(20),
+    saldo DECIMAL(14,2) DEFAULT 0,
+    activa BOOLEAN DEFAULT true,
+    CONSTRAINT chk_account_type CHECK (type IN ('ACTIVO','PASIVO','PATRIMONIO','INGRESO','GASTO'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_coa_type ON chart_of_accounts(type);
+
+CREATE TABLE IF NOT EXISTS journal_entries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_number VARCHAR(30) UNIQUE NOT NULL,
+    fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+    referencia VARCHAR(100),
+    descripcion TEXT,
+    source VARCHAR(30) NOT NULL,        -- VENTA / COMPRA / NOMINA / MANUAL
+    source_id UUID,
+    total_debito DECIMAL(14,2) NOT NULL DEFAULT 0,
+    total_credito DECIMAL(14,2) NOT NULL DEFAULT 0,
+    creado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT chk_source CHECK (source IN ('VENTA','COMPRA','NOMINA','MANUAL'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_journal_fecha ON journal_entries(fecha DESC);
+
+CREATE TABLE IF NOT EXISTS journal_entry_lines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entry_id UUID NOT NULL REFERENCES journal_entries(id) ON DELETE CASCADE,
+    account_code VARCHAR(20) NOT NULL,
+    account_name VARCHAR(255) NOT NULL,
+    debit DECIMAL(14,2) NOT NULL DEFAULT 0,
+    credit DECIMAL(14,2) NOT NULL DEFAULT 0,
+    FOREIGN KEY (entry_id) REFERENCES journal_entries(id)
+);
+
+-- ================================================
+-- RRHH: EVALUACIONES DE DESEMPEÑO (Fase 3.5)
+-- ================================================
+CREATE TABLE IF NOT EXISTS employee_evaluations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES employees(id),
+    period VARCHAR(20) NOT NULL,        -- ej. 2026-S1
+    evaluator VARCHAR(255),
+    punctuality INTEGER DEFAULT 3,      -- 1-5
+    quality INTEGER DEFAULT 3,
+    teamwork INTEGER DEFAULT 3,
+    productivity INTEGER DEFAULT 3,
+    overall_score DECIMAL(4,2) DEFAULT 3.00,
+    comments TEXT,
+    creado_en TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT chk_eval_score CHECK (punctuality BETWEEN 1 AND 5 AND quality BETWEEN 1 AND 5 AND teamwork BETWEEN 1 AND 5 AND productivity BETWEEN 1 AND 5)
+);
+
+-- ================================================
+-- COMPRAS: EVALUACIÓN DE PROVEEDORES (Fase 2.4)
+-- ================================================
+CREATE TABLE IF NOT EXISTS supplier_ratings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    supplier_id UUID NOT NULL,
+    po_id UUID,
+    quality INTEGER DEFAULT 3,          -- 1-5 calidad del producto
+    timeliness INTEGER DEFAULT 3,       -- 1-5 puntualidad de entrega
+    price_competitiveness INTEGER DEFAULT 3, -- 1-5 competitividad de precio
+    overall DECIMAL(3,1) DEFAULT 3.0,
+    comments TEXT,
+    creado_en TIMESTAMP DEFAULT NOW()
+);
+
+-- ================================================
+-- SERVICIOS (Fase 5)
+-- ================================================
+CREATE TABLE IF NOT EXISTS services (
 CREATE TABLE IF NOT EXISTS services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     nombre VARCHAR(255) NOT NULL,
@@ -314,3 +393,32 @@ CREATE TABLE IF NOT EXISTS facturas_seniat (
 );
 
 CREATE INDEX IF NOT EXISTS idx_facturas_control ON facturas_seniat(numero_control);
+-- SEED: Plan de Cuentas básico venezolano (idempotente)
+INSERT INTO chart_of_accounts (code, name, type)
+VALUES
+  ('1.1.1.01', 'Caja', 'ACTIVO'),
+  ('1.1.1.02', 'Banco', 'ACTIVO'),
+  ('1.1.2.01', 'Cuentas por cobrar clientes', 'ACTIVO'),
+  ('1.1.3.01', 'Inventario de mercancías', 'ACTIVO'),
+  ('1.1.4.01', 'IVA acreditable (compras)', 'ACTIVO'),
+  ('1.2.1.01', 'Mobiliario y equipo', 'ACTIVO'),
+  ('1.2.2.01', 'Equipos de cómputo', 'ACTIVO'),
+  ('1.2.3.01', 'Depreciación acumulada', 'ACTIVO'),
+  ('2.1.1.01', 'Cuentas por pagar proveedores', 'PASIVO'),
+  ('2.1.2.01', 'IVA por pagar (ventas)', 'PASIVO'),
+  ('2.1.3.01', 'Retenciones IVSS por pagar', 'PASIVO'),
+  ('2.1.3.02', 'Retenciones FAOV por pagar', 'PASIVO'),
+  ('2.1.3.03', 'Retenciones ISLR por pagar', 'PASIVO'),
+  ('2.1.4.01', 'Sueldos por pagar', 'PASIVO'),
+  ('2.1.5.01', 'Prestaciones sociales por pagar', 'PASIVO'),
+  ('3.1.1.01', 'Capital social', 'PATRIMONIO'),
+  ('3.1.2.01', 'Utilidades retenidas', 'PATRIMONIO'),
+  ('4.1.1.01', 'Ventas de mercancías', 'INGRESO'),
+  ('4.1.2.01', 'Ventas de servicios', 'INGRESO'),
+  ('5.1.1.01', 'Costo de ventas', 'GASTO'),
+  ('5.2.1.01', 'Gasto de sueldos y salarios', 'GASTO'),
+  ('5.2.1.02', 'Gasto de cesta ticket', 'GASTO'),
+  ('5.2.2.01', 'Gasto de alquiler', 'GASTO'),
+  ('5.2.3.01', 'Gasto de servicios públicos', 'GASTO'),
+  ('5.2.4.01', 'Gasto de depreciación', 'GASTO')
+ON CONFLICT (code) DO NOTHING;

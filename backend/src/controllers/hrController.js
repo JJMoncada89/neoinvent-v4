@@ -96,4 +96,31 @@ export const getDepartments = async (req, res) => {
   res.json(r.rows.map(x => x.department));
 };
 
+// ----- 3.5 EVALUACIONES DE DESEMPEÑO -----
+export const createEvaluation = async (req, res) => {
+  try {
+    const { employee_id, period, evaluator, punctuality, quality, teamwork, productivity, comments } = req.body;
+    if (!employee_id || !period) return res.status(400).json({ error: 'employee_id y period requeridos' });
+    const scores = [punctuality, quality, teamwork, productivity].map(Number);
+    const overall = +(scores.reduce((a, x) => a + x, 0) / 4).toFixed(2);
+    const r = await pool.query(
+      `INSERT INTO employee_evaluations (employee_id, period, evaluator, punctuality, quality, teamwork, productivity, overall_score, comments)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [employee_id, period, evaluator || req.user?.userName || 'system', punctuality || 3, quality || 3, teamwork || 3, productivity || 3, overall, comments || null]
+    );
+    await registrarAuditoria({ entityType: 'employee_evaluations', entityId: r.rows[0].id, action: 'CREATE', userId: req.user?.userId, userName: req.user?.userName || 'system', afterData: { employee_id, period, overall }, ipAddress: req.ip });
+    res.status(201).json({ message: 'Evaluación registrada', evaluation: r.rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const getEvaluations = async (req, res) => {
+  try {
+    const r = await pool.query(
+      `SELECT ev.*, e.first_name, e.last_name FROM employee_evaluations ev
+       JOIN employees e ON e.id = ev.employee_id ORDER BY ev.creado_en DESC LIMIT 100`
+    );
+    res.json(r.rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
 export { calcularPrestaciones, TIPOS_CONTRATO, DEDUCCIONES };

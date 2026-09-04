@@ -25,7 +25,7 @@
           '<td class="num">' + U.money(po.subtotal) + '</td>' +
           '<td class="num">' + U.money(po.total) + '</td>' +
           '<td><span class="pill ' + (po.status === 'RECIBIDA' ? 'pill-ok' : po.status === 'EMITIDA' ? 'pill-in' : 'pill-warn') + '">' + U.esc(po.status || 'BORRADOR') + '</span></td>' +
-          '<td class="actions">' + (po.status !== 'RECIBIDA' ? '<button class="icon-btn" data-po-rec="' + po.id + '" title="Recibir">📦</button>' : '') + '</td></tr>';
+          '<td class="actions">' + (po.status !== 'RECIBIDA' ? '<button class="icon-btn" data-po-rec="' + po.id + '" title="Recibir">📦</button>' : '<button class="icon-btn" data-po-rate="' + po.id + '" title="Evaluar proveedor">⭐</button>') + '</td></tr>';
       }).join('');
 
       return '<div class="toolbar">' +
@@ -44,9 +44,37 @@
         if (req) poForm(ctx, req);
       }));
       el.querySelectorAll('[data-po-rec]').forEach(b => b.addEventListener('click', () => receivePO(ctx, b.dataset.poRec)));
+      el.querySelectorAll('[data-po-rate]').forEach(b => b.addEventListener('click', () => rateForm(ctx, b.dataset.poRate)));
       Store.logEvent('VIEW', 'compras', 'Acceso a módulo Compras', ctx.currentUser?.username);
     },
   };
+
+  // ----- 2.4 Evaluación de proveedor -----
+  function rateForm(ctx, poId) {
+    const db = Store.get();
+    const po = (db.purchaseOrders || []).find(p => p.id === poId);
+    if (!po) return;
+    const sel = (name, label) =>
+      U.field(label + ' (1-5)', '<select name="' + name + '" class="input">' + [1,2,3,4,5].map(v => '<option' + (v === 3 ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>');
+    UI.modal('Evaluar proveedor — ' + U.esc(po.supplier || '—'),
+      '<form id="rate-form">' +
+      '<div class="grid2">' + sel('quality', 'Calidad producto') + sel('timeliness', 'Puntualidad') +
+      sel('price', 'Precio competitivo') + '</div>' +
+      U.field('Comentarios', '<textarea name="comments" rows="2" class="input"></textarea>') +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-cancel>Cancelar</button>' +
+      '<button type="submit" class="btn btn-primary">Registrar evaluación</button></div></form>');
+    document.querySelector('#rate-form [data-cancel]').addEventListener('click', UI.closeModal);
+    document.getElementById('rate-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const scores = ['quality', 'timeliness', 'price'].map(n => Number(f.get(n)));
+      const overall = +(scores.reduce((a, x) => a + x, 0) / 3).toFixed(1);
+      db.supplierRatings = db.supplierRatings || [];
+      db.supplierRatings.push({ id: K('rate'), supplier_id: po.supplier_id || po.supplier, po_id: po.id, quality: scores[0], timeliness: scores[1], price: scores[2], overall, comments: f.get('comments'), fecha: new Date().toISOString() });
+      Store.logEvent('CREATE', 'compras-ratings', 'Proveedor ' + (po.supplier || '') + ' evaluado: ' + overall + '/5', ctx.currentUser?.username);
+      Store.persist(); UI.closeModal(); UI.toast('Proveedor evaluado: ' + overall + '/5', 'success'); ctx.reload();
+    });
+  }
 
   function reqForm(ctx) {
     const db = Store.get();

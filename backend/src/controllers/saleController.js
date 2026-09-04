@@ -24,7 +24,7 @@ export const createSale = async (req, res) => {
 
       for (const item of items) {
         const productResult = await client.query(
-          'SELECT id, nombre, precio, stock, categoria FROM productos WHERE id = $1 FOR UPDATE',
+          'SELECT id, nombre, precio, stock, categoria, cost FROM productos WHERE id = $1 FOR UPDATE',
           [item.productId]
         );
 
@@ -70,6 +70,7 @@ export const createSale = async (req, res) => {
           nombre: product.nombre,
           cantidad: item.cantidad,
           precioUnitario,
+          cost: product.cost || 0,
           tasaIVA: taxRate,
           montoIVA: impuestoItem,
           subtotal: subtotalItem,
@@ -116,6 +117,15 @@ export const createSale = async (req, res) => {
       }
 
       await client.query('COMMIT');
+
+      // ASIENTO CONTABLE AUTOMÁTICO (Fase 4) — no bloquea la venta si falla
+      try {
+        const { asientoVenta } = await import('../controllers/accountingController.js');
+        const costo = saleItems.reduce((a, si) => a + ((si.cost || 0) * si.cantidad), 0);
+        await asientoVenta({ ventaId: ventaResult.rows[0].id, subtotal, iva, total, costo: +costo.toFixed(2) });
+      } catch (accErr) {
+        console.warn('⚠️ Asiento contable no generado:', accErr.message);
+      }
 
       // Generar QR
       const autorizacion = facturaResult.numeroControl || ventaResult.rows[0].id;

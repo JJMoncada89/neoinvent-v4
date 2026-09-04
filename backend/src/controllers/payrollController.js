@@ -70,6 +70,22 @@ export const runPayroll = async (req, res) => {
       }
       await client.query('UPDATE payroll_runs SET total_gross=$1,total_deducciones=$2,total_neto=$3 WHERE id=$4', [+totalGross.toFixed(2), +totalDed.toFixed(2), +totalNeto.toFixed(2), run.id]);
       await client.query('COMMIT');
+
+      // ASIENTO CONTABLE AUTOMÁTICO (Fase 4) — no bloquea la nómina si falla
+      try {
+        const { asientoNomina } = await import('../controllers/accountingController.js');
+        const sumRet = detalles.reduce((a, d) => ({
+          ivss: a.ivss + d.retencionIVSS, faov: a.faov + d.retencionFaov, islr: a.islr + d.retencionIslr,
+        }), { ivss: 0, faov: 0, islr: 0 });
+        await asientoNomina({
+          payrollId: run.id, gross: +totalGross.toFixed(2),
+          ivss: +sumRet.ivss.toFixed(2), faov: +sumRet.faov.toFixed(2), islr: +sumRet.islr.toFixed(2),
+          neto: +totalNeto.toFixed(2),
+        });
+      } catch (accErr) {
+        console.warn('⚠️ Asiento contable no generado:', accErr.message);
+      }
+
       await registrarAuditoria({ entityType: 'payroll_runs', entityId: run.id, action: 'CREATE', userId: req.user?.userId, userName: req.user?.userName || 'system', afterData: { periodo, tipo, totalGross, totalDed, totalNeto }, ipAddress: req.ip });
       res.status(201).json({ message: 'Nómina procesada (borrador)', payroll: { ...run, total_gross: totalGross, total_deducciones: totalDed, total_neto: totalNeto }, detalles });
     } catch (e) { await client.query('ROLLBACK'); throw e; } finally { client.release(); }

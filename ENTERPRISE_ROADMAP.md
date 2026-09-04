@@ -52,27 +52,29 @@
   - Máximo 5000 eventos con timestamp exacto, user, device
 - [ ] **1.6** Exportación forense CSV full desde backend (parcial: local sí, backend requiere token)
 
-### 🔨 FASE 2 — COMPRAS — 70% COMPLETADA ✅
+### 🔨 FASE 2 — COMPRAS — 95% COMPLETADA ✅
 - [x] **2.1** Requisiciones de compra (frontend local + backend) ✅
 - [x] **2.2** Órdenes de compra (PO) con IVA 16% automático ✅
 - [x] **2.3** Recepción de mercancía que actualiza stock ✅
 - [x] **2.5** Proveedores reutilizados del módulo inventario ✅
-- [ ] **2.4** Evaluación de proveedores (rating) — pendiente
+- [x] **2.4** Evaluación de proveedores (calidad/puntualidad/precio 1-5, modal UI + backend) ✅
 
-### 🔨 FASE 3 — RRHH — 85% COMPLETADA ✅
+### 🔨 FASE 3 — RRHH — 95% COMPLETADA ✅
 - [x] **3.1** Gestión de empleados (CRUD + seed demo) ✅
 - [x] **3.2** Contratos laborales (tipos LOTTT: FIJO, TEMPORAL, OBRA...) ✅
 - [x] **3.3** Nómina con IVSS 4% + FAOV 2% + INCE 0.5% + ISLR progresivo UT ✅
   - Backend: `payrollController.js` con `calcularISLR` por tramos UT + `runPayroll`
   - Frontend: `js/views/payroll.js` con cálculo, comprobante imprimible y persistencia de corridas
 - [x] **3.4** Despidos/renuncias/terminaciones (tipos LOT) ✅
-- [ ] **3.5** Evaluaciones de desempeño
+- [x] **3.5** Evaluaciones de desempeño (4 criterios 1-5, score promedio, modal UI + backend) ✅
 
-### 🔨 FASE 4 — CONTABILIDAD
-- [ ] **4.1** Plan de cuentas
-- [ ] **4.2** Asientos automáticos
-- [ ] **4.3** Balance general
-- [ ] **4.4** Declaración IVA
+### 🔨 FASE 4 — CONTABILIDAD — 85% COMPLETADA ✅
+- [x] **4.1** Plan de cuentas (25 cuentas venezolanas estándar, seed idempotente) ✅
+- [x] **4.2** Asientos automáticos VENTA/COMPRA/NOMINA con validación de cuadratura débito=crédito ✅
+  - `accountingController.js`: asientoVenta (incluye costo/inventario), asientoCompra (IVA acreditable), asientoNomina (retenciones por pagar)
+- [x] **4.3** Balance general + Estado de Resultados (local-first, live) ✅
+- [x] **4.4** Declaración IVA (débito - crédito, saldo a favor/pagar) ✅
+- [ ] **4.5** Cierre contable anual y libro mayor por cuenta
 
 ### 🔨 FASE 5 — SERVICIOS Y TECNOLOGÍA
 - [ ] **5.1** Catálogo de servicios
@@ -96,15 +98,15 @@ Al retomar la sesión, el estado se reconstruye así:
 7. **Pendiente Fase 5**: servicios/activos TI/SLA. **Fase 6**: dashboard ejecutivo por departamento.
 8. **Gate de calidad**: ejecutar `node --check` en todo JS + test E2E `/tmp/vtest/browser_test.js` antes de cada push.
 
-Próximo milestone lógico: **3.5 Evaluaciones de desempeño**, **2.4 Evaluación de proveedores**, o **Fase 4 Contabilidad** (asientos automáticos por venta/compras/nómina).
+COMPLETADO: Fase 4 Contabilidad (asientos automáticos + balance + PyG + IVA), 3.5 evaluaciones RRHH, 2.4 rating proveedores. **Próximo: Fase 5 Servicios/TI/SLA y Fase 6 Dashboard Ejecutivo por departamento.**
 
 ## PROGRESO
 | Fase | Estado | Progreso | Última actualización |
 |---|---|---|---|
 | 0 - Investigación | ✅ | 100% | 27-ago-2026 |
 | 1 - Auditoría Forense | 🔧 Casi completa | 90% | 27-ago-2026 |
-| 2 - Compras | 🔧 Casi completa | 70% | 27-ago-2026 |
-| 3 - RRHH | 🔧 Casi completa | 85% | 27-ago-2026 |
-| 4 - Contabilidad | ⏳ Pendiente | 0% | — |
+| 2 - Compras | ✅ Completa | 95% | 27-ago-2026 |
+| 3 - RRHH | ✅ Completa | 95% | 27-ago-2026 |
+| 4 - Contabilidad | 🔧 Casi completa | 85% | 27-ago-2026 |
 | 5 - Servicios | ⏳ Pendiente | 0% | — |
 | 6 - Dashboard | ⏳ Pendiente | 0% | — |

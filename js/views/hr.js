@@ -24,6 +24,7 @@
           '<td class="actions">' +
           '<button class="icon-btn" data-emp-detail="' + e.id + '" title="Ver">👁</button>' +
           '<button class="icon-btn" data-emp-contract="' + e.id + '" title="Contrato">📄</button>' +
+          '<button class="icon-btn" data-emp-eval="' + e.id + '" title="Evaluación">📊</button>' +
           '<button class="icon-btn danger" data-emp-term="' + e.id + '" title="Terminación">✕</button>' +
           '</td></tr>';
       }).join('');
@@ -36,9 +37,41 @@
       el.querySelectorAll('[data-emp-detail]').forEach(b => b.addEventListener('click', () => employeeDetail(ctx, b.dataset.empDetail)));
       el.querySelectorAll('[data-emp-contract]').forEach(b => b.addEventListener('click', () => contractForm(ctx, b.dataset.empContract)));
       el.querySelectorAll('[data-emp-term]').forEach(b => b.addEventListener('click', () => terminationForm(ctx, b.dataset.empTerm)));
+      el.querySelectorAll('[data-emp-eval]').forEach(b => b.addEventListener('click', () => evaluationForm(ctx, b.dataset.empEval)));
       Store.logEvent('VIEW', 'rrhh', 'Acceso a módulo RRHH', ctx.currentUser?.username);
     },
   };
+
+  // ----- 3.5 Evaluación de desempeño -----
+  function evaluationForm(ctx, id) {
+    const db = Store.get();
+    const emp = (db.employees || []).find(e => e.id === id);
+    if (!emp) return;
+    const slider = (name, label) =>
+      U.field(label + ' (1-5)', '<select name="' + name + '" class="input">' + [1,2,3,4,5].map(v => '<option' + (v === 3 ? ' selected' : '') + '>' + v + '</option>').join('') + '</select>');
+    UI.modal('Evaluación de desempeño — ' + U.esc(emp.first_name + ' ' + emp.last_name),
+      '<form id="eval-form">' +
+      U.field('Período', '<input type="text" name="period" value="' + new Date().getFullYear() + '-S' + (new Date().getMonth() < 6 ? '1' : '2') + '" required>') +
+      '<div class="grid2">' + slider('punctuality', 'Puntualidad') + slider('quality', 'Calidad') +
+      slider('teamwork', 'Trabajo en equipo') + slider('productivity', 'Productividad') + '</div>' +
+      U.field('Comentarios', '<textarea name="comments" rows="2" class="input"></textarea>') +
+      '<div class="modal-actions"><button type="button" class="btn btn-ghost" data-cancel>Cancelar</button>' +
+      '<button type="submit" class="btn btn-primary">Registrar evaluación</button></div></form>');
+    document.querySelector('#eval-form [data-cancel]').addEventListener('click', UI.closeModal);
+    document.getElementById('eval-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const scores = ['punctuality', 'quality', 'teamwork', 'productivity'].map(n => Number(f.get(n)));
+      const overall = +(scores.reduce((a, x) => a + x, 0) / 4).toFixed(2);
+      const ev = { id: K('ev'), employee_id: emp.id, period: f.get('period'), punctuality: scores[0], quality: scores[1], teamwork: scores[2], productivity: scores[3], overall, comments: f.get('comments'), fecha: new Date().toISOString() };
+      db.evaluations = db.evaluations || [];
+      db.evaluations.push(ev);
+      Store.logEvent('CREATE', 'rrhh-evaluaciones', 'Evaluación ' + ev.period + ' para ' + emp.first_name + ' ' + emp.last_name + ': score ' + overall, ctx.currentUser?.username);
+      Store.persist(); UI.closeModal();
+      UI.toast('Evaluación registrada: ' + overall + '/5', overall >= 3.5 ? 'success' : 'warn');
+      ctx.reload();
+    });
+  }
 
   // ----- Formulario empleado -----
   function employeeForm(ctx, emp) {
