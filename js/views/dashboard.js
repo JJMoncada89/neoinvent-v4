@@ -86,7 +86,7 @@
 
       const execKpis =
         '<div class="kpis">' +
-        U.kpiCard({ label: '📈 Ventas', value: U.money(ingresos), sub: ventasHist.length + ' ventas · margen ' + utilidadPct + '%', tone: 'pos' }) +
+        U.kpiCard({ label: '📈 Ventas', value: U.money(ingresos) + U.moneyUSDAmber(ingresos), sub: ventasHist.length + ' ventas · margen ' + utilidadPct + '%', tone: 'pos' }) +
         U.kpiCard({ label: '🛒 Compras', value: U.money(totalCompras), sub: comprasActivas.length + ' órdenes' }) +
         U.kpiCard({ label: '👥 RRHH', value: activos.length + ' activos', sub: 'Nómina: ' + U.money(nominaMensual) + '/mes' + (evalPromedio !== null ? ' · Desempeño ' + evalPromedio + '/5' : '') }) +
         U.kpiCard({ label: '🛠️ Servicio TI', value: woAbiertas + ' WO abiertas', sub: woBreached > 0 ? '⚠️ ' + woBreached + ' SLA vencidos' : 'SLA al día', tone: woBreached > 0 ? 'neg' : 'info' }) +

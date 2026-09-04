@@ -4,12 +4,19 @@
 (function (global) {
   'use strict';
 
-  // ---------- Moneda ----------
+  // ---------- Moneda (dua: VES base + USD si hay tasa BCV) ----------
   function money(n) {
     const cur = (Store.get()?.settings?.currency) || 'USD';
-    const symbols = { USD: '$', MXN: '$', EUR: '€', COP: '$', PEN: 'S/', ARS: '$' };
-    const sym = symbols[cur] || cur + ' ';
+    const symbols = { USD: '$', MXN: '$', EUR: '€', COP: '$', PEN: 'S/', ARS: '$', VES: 'Bs ' };
+    const sym = (symbols[cur] || cur + ' ');
     return sym + Number(n || 0).toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function moneyUSDAmber(n) {
+    const rate = parseFloat((Store.get()?.settings?.bcvRate) || 0);
+    if (!rate || rate <= 0) return '';
+    const usd = Number(n || 0) / rate;
+    return ' ≈ $' + usd.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   // ---------- Fechas ----------
@@ -76,6 +83,6 @@
 
   // ---------- Ripple / util misc ----------
   global.Utils = {
-    money, fmtDateStr, fmtDateTime, todayISO, exportCSV, downloadBlob, downloadJSON, num, esc, uid: Store.uid,
+    money, moneyUSDAmber, fmtDateStr, fmtDateTime, todayISO, exportCSV, downloadBlob, downloadJSON, num, esc, uid: Store.uid,
   };
 })(window);

@@ -1,15 +1,26 @@
+# ============================================================
+# NEOINVENT ENTERPRISE — Render Blueprint (deploy TODO automático)
+# Conecta tu repo a Render → New → Blueprint → selecciona este repo.
+# Render crea SOLO: PostgreSQL + Backend (Web Service) + Frontend (Static).
+# En cada push, re-despliega ambos automáticamente.
+# ============================================================
+
 services:
-  backend:
-    type: web
+  # ---------- BACKEND (API Node.js + PostgreSQL) ----------
+  - type: web
     name: neoinvent-api
     runtime: node
     rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health
+    # Se ejecuta DESPUÉS del deploy: crea tablas + admin inicial
+    postDeploy: npm run migrate && npm run seed
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
         fromDatabase:
           name: neoinvent-db
@@ -19,22 +30,49 @@ services:
       - key: MASTER_AUDIT_KEY_HASH
         sync: false
       - key: ADMIN_EMAIL
-        sync: false
+        value: admin@neoinvent.local
       - key: ADMIN_PASSWORD
-        sync: false
+        value: admin123
+      - key: ADMIN_NAME
+        value: Administrador
       - key: SENIAT_RIF
-        sync: false
+        value: J-99999999-0
       - key: EMPRESA_NOMBRE
-        sync: false
+        value: NEOINVENT Enterprise C.A.
+      - key: EMPRESA_DIRECCION
+        value: Caracas, Venezuela
+      - key: EMPRESA_TELEFONO
+        value: +58 212 0000000
+      - key: UT_VALUE
+        value: 100
+      # CORS: permitimos el dominio del frontend (inyectado por Render)
       - key: CORS_ORIGIN
-        sync: false
+        fromService:
+          type: web
+          name: neoinvent-frontend
+          property: url
+      # URL pública del frontend para reportes/emails
+      - key: FRONTEND_URL
+        fromService:
+          type: web
+          name: neoinvent-frontend
+          property: url
     plan: free
 
-  frontend:
-    type: web
+  # ---------- FRONTEND (Static Site — PWA) ----------
+  - type: web
     name: neoinvent-frontend
     runtime: static
-    buildCommand: echo "Static site, no build needed"
+    rootDir: .
+    buildCommand: |
+      set -e
+      # Inyecta la URL del backend en el cliente API (placeholder → URL real)
+      if [ -n "$VITE_API_URL" ]; then
+        sed -i "s|__API_URL__|$VITE_API_URL|g" js/api.js
+        echo "API inyectada: $VITE_API_URL"
+      else
+        echo "Sin VITE_API_URL — el frontend usará modo local/demo"
+      fi
     staticPublishPath: .
     headers:
       - path: /*
@@ -44,10 +82,19 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: neoinvent-api
+          property: url
     plan: free
 
+# ---------- BASE DE DATOS (PostgreSQL free) ----------
 databases:
   - name: neoinvent-db
     plan: free
     databaseName: neoinvent
     user: neoinvent
+    # Render genera la contraseña; se inyecta en DATABASE_URL del backend
+    ipAllowList: []

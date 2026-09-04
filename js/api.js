@@ -9,11 +9,18 @@
 
   const API_KEY = 'neoinvent_api_url';
 
+  // Placeholder que Render reemplaza en build (render.yaml → VITE_API_URL)
+  const INJECTED_API = '__API_URL__';
+
   function apiBase() {
+    // 0º URL inyectada por Render en build (placeholder ya reemplazado)
+    if (INJECTED_API && INJECTED_API.indexOf('__API_URL__') === -1 && INJECTED_API.startsWith('http')) {
+      return INJECTED_API.replace(/\/+$/, '');
+    }
     // 1º configuración explícita del usuario (Ajustes)
     const saved = localStorage.getItem(API_KEY);
     if (saved) return saved.replace(/\/+$/, '');
-    // 2º variable inyectada en build
+    // 2º variable inyectada en build (fallback genérico)
     if (typeof VITE_API_URL !== 'undefined' && VITE_API_URL) return VITE_API_URL.replace(/\/+$/, '');
     // 3º proxy dev local (vite server.proxy /api → localhost:4000)
     return '/api';

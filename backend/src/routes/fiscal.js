@@ -2,9 +2,13 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { SENIAT_CONFIG } from '../config/seniat.js';
 import { pool } from '../config/database.js';
+import { getLibrosSENIAT } from '../controllers/librosSeniatController.js';
 
 const router = Router();
 router.use(authenticate);
+
+// Libros IVA formato SENIAT (descarga TXT)
+router.get('/libros', getLibrosSENIAT);
 
 // Obtener configuración fiscal de la empresa
 router.get('/config', async (req, res) => {

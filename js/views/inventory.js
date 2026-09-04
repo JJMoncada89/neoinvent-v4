@@ -10,14 +10,29 @@
     subtitle: 'Productos, categorías, kardex y reposiciones',
     render(ctx) {
       const db = Store.get();
+      const now = Date.now();
       const rows = db.products.map(p => {
         const low = p.stock <= p.stockMin;
         const gain = (p.price - p.cost).toFixed(2);
+
+        // FASE 9 (gemini_code): ROP = consumo medio diario × lead time + stock seguridad
+        const salidas30 = db.movements.filter(m =>
+          m.productId === p.id && m.type === 'salida' &&
+          now - new Date(m.date).getTime() < 30 * 86400000
+        );
+        const consumoDiario = salidas30.reduce((a, m) => a + m.qty, 0) / 30;
+        const leadTime = db.settings.leadTimeDays || 7;
+        const stockSeguridad = p.stockMin || 5;
+        const rop = Math.ceil(consumoDiario * leadTime + stockSeguridad);
+        const reposicionSugerida = p.stock < rop ? Math.max(rop - p.stock, 1) : 0;
+        const ropPill = reposicionSugerida > 0 ? '<span class="pill pill-warn">⚠️ ' + reposicionSugerida + '</span>' : '<span class="pill pill-ok">✓</span>';
+
         return '<tr>' +
           '<td>' + U.esc(p.sku) + '</td>' +
           '<td><strong>' + U.esc(p.name) + '</strong></td>' +
           '<td>' + U.esc(Store.categoryName(p.categoryId)) + '</td>' +
           '<td class="num">' + p.stock + ' <span class="pill ' + (low ? 'pill-warn' : 'pill-ok') + '">' + (low ? 'Bajo' : 'OK') + '</span></td>' +
+          '<td class="num" title="Consumo/día: ' + consumoDiario.toFixed(2) + '">' + ropPill + ' ' + rop + '</td>' +
           '<td class="num">' + U.money(p.cost) + '</td>' +
           '<td class="num">' + U.money(p.price) + '</td>' +
           '<td class="num">' + U.money(gain) + '</td>' +
@@ -34,7 +49,7 @@
         '<button class="btn btn-outline" data-act="moves">Movimientos</button>' +
         '<button class="btn btn-outline" data-act="export">Exportar CSV</button></div>' +
         '<button class="btn btn-primary" data-act="add">+ Nuevo producto</button>' +
-        '</div>' + U.table(['SKU', 'Producto', 'Categoría', 'Stock', 'Costo', 'Precio', 'Gan.', ''], rows, 'No hay productos. Agrega el primero.');
+        '</div>' + U.table(['SKU', 'Producto', 'Categoría', 'Stock', 'ROP', 'Costo', 'Precio', 'Gan.', ''], rows, 'No hay productos. Agrega el primero.');
     },
     mount(ctx, el) {
       el.querySelector('#pd-search').addEventListener('input', (e) => {

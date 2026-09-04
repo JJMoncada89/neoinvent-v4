@@ -146,7 +146,7 @@
     el.querySelector('#t-subtotal').textContent = U.money(subtotal);
     el.querySelector('#t-tax').textContent = U.money(tax);
     el.querySelector('#t-disc').textContent = '−' + U.money(disc);
-    el.querySelector('#t-total').textContent = U.money(total);
+    el.querySelector('#t-total').textContent = U.money(total) + U.moneyUSDAmber(total);
   }
 
   function nextFolio() {

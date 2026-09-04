@@ -33,6 +33,9 @@
         '<div class="card"><div class="card-title">Seguridad & datos</div>' +
         '<div class="stack">' +
         U.field('URL del backend (opcional)', '<input type="text" id="api-url" class="input" value="' + U.esc(Store.get().settings.apiUrl || API.apiBase()) + '" placeholder="https://tu-backend.onrender.com">') +
+        U.field('Tasa BCV USD (Bs)', '<div class="grid2" style="align-items:center">' +
+        '<input type="number" id="bcv-rate" class="input" step="0.001" min="0" value="' + (Store.get().settings.bcvRate || '') + '">' +
+        '<button class="btn btn-outline" data-bcv-auto>📡 Auto (BCV)</button></div>') +
         '<button class="btn btn-outline" data-bk>📤 Respaldo (descargar JSON)</button>' +
         '<button class="btn btn-outline" data-rest>📥 Restaurar respaldo</button>' +
         '<input type="file" id="restore-file" accept="application/json" hidden>' +
@@ -75,6 +78,34 @@
           db.settings.apiUrl = url;
           Store.persist();
           UI.toast(url ? 'Backend configurado: ' + API.apiBase() : 'Backend local / demo', 'success');
+        });
+      }
+
+      // Tasa BCV: guardar manual
+      const bcvInput = el.querySelector('#bcv-rate');
+      if (bcvInput) {
+        bcvInput.addEventListener('change', () => {
+          const rate = parseFloat(bcvInput.value);
+          if (rate > 0) {
+            db.settings.bcvRate = rate;
+            Store.persist();
+            UI.toast('Tasa BCV guardada: ' + rate + ' Bs/USD', 'success');
+          }
+        });
+        // Auto: consultar backend (si disponible) o mostrar mensaje local
+        el.querySelector('[data-bcv-auto]').addEventListener('click', async () => {
+          try {
+            const res = await fetch(API.apiBase() + '/api/v1/currency/rate');
+            if (!res.ok) throw new Error('no backend');
+            const data = await res.json();
+            bcvInput.value = data.tasa;
+            db.settings.bcvRate = data.tasa;
+            Store.persist();
+            UI.toast('Tasa BCV actualizada: ' + data.tasa + ' Bs/USD (' + (data.fuente || 'BCV') + ')', 'success');
+          } catch (e) {
+            // Fallback: estimación local 0 (pide que use el backend)
+            UI.toast('Conecta el backend para tasa BCV automática; usa la manual por ahora.', 'warn');
+          }
         });
       }
 

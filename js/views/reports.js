@@ -15,6 +15,8 @@
         '<input type="date" id="rp-from" class="input"><input type="date" id="rp-to" class="input">' +
         '<button class="btn btn-outline" data-filter>Filtrar</button>' +
         '<button class="btn btn-outline" data-csv>Exportar CSV</button>' +
+        '<button class="btn btn-outline" data-libro-ventas>🏛️ Libro Ventas TXT</button>' +
+        '<button class="btn btn-outline" data-libro-compras>🏛️ Libro Compras TXT</button>' +
         '</div></div>' +
         '<div class="card" id="rp-container"><div class="card-title">Detalle de ventas</div>' +
         U.table(['Folio', 'Fecha', 'Cliente', 'Método', 'Subtotal', 'Desc.', 'Total', 'Estado'], rows, 'Sin ventas') + '</div>';
@@ -42,6 +44,46 @@
           Metodo: s.method, Subtotal: s.subtotal, Descuento: s.discount, Total: s.total, Estado: s.cancelled ? 'ANULADA' : 'OK'
         })));
       });
+
+      // ===== 4.5 Libros IVA SENIAT (TXT) — dual backend/local =====
+      async function descargarLibro(tipo) {
+        const mes = new Date().getMonth() + 1, anio = new Date().getFullYear();
+        const jwt = localStorage.getItem('neoinvent_jwt') || '';
+        // 1º intentar backend
+        try {
+          const res = await fetch(API.apiBase() + '/api/v1/fiscal/libros?tipo=' + tipo + '&mes=' + mes + '&anio=' + anio, {
+            headers: { Authorization: 'Bearer ' + jwt },
+          });
+          if (res.ok) {
+            const blob = await res.blob();
+            U.downloadBlob(blob, 'LIBRO_' + tipo.toUpperCase() + '_' + String(mes).padStart(2, '0') + '_' + anio + '.txt');
+            UI.toast('Libro ' + tipo + ' descargado (formato SENIAT)', 'success');
+            return;
+          }
+        } catch { /* fallback local */ }
+
+        // 2º fallback local: generar TXT con las mismas columnas
+        const db = Store.get();
+        const rif = db.settings.seniatRif || 'J-99999999-0';
+        const data = tipo === 'ventas' ? (db.sales || []).filter(s => !s.cancelled) : (db.purchaseOrders || []);
+        const mesStr = String(mes).padStart(2, '0');
+        const lines = ['LIBRO DE ' + tipo.toUpperCase() + ' (IVA)', 'PERIODO: ' + mesStr + '/' + anio, 'RIF: ' + rif];
+        data.filter(x => x.date && new Date(x.date).getMonth() + 1 === mes).forEach(x => {
+          lines.push([
+            tipo === 'ventas' ? (x.folio || x.id) : (x.po_number || x.id),
+            tipo === 'ventas' ? ((Store.customerById(x.customerId) || {}).name || 'Consumidor Final').toUpperCase() : (x.supplier || 'PROVEEDOR').toUpperCase(),
+            new Date(x.date || x.fecha).toLocaleDateString('es'),
+            x.subtotal || 0, x.tax || x.iva || 0, x.total || 0,
+          ].join('|'));
+        });
+        lines.push('TOTAL REGISTROS: ' + (data.length));
+        lines.push('NOTA: ARCHIVO GENERADO PARA DECLARACION ANTE EL SENIAT. VERIFICAR CON CONTADOR.');
+        U.downloadBlob(new Blob([lines.join('\n')], { type: 'text/plain;charset=iso-8859-1' }), 'LIBRO_' + tipo.toUpperCase() + '_' + mesStr + '_' + anio + '.txt');
+        Store.logEvent('EXPORT', 'fiscal-libros', 'Libro ' + tipo + ' ' + mesStr + '/' + anio + ' exportado', ctx.currentUser?.username);
+        UI.toast('Libro ' + tipo + ' generado (local)', 'success');
+      }
+      el.querySelector('[data-libro-ventas]').addEventListener('click', () => descargarLibro('ventas'));
+      el.querySelector('[data-libro-compras]').addEventListener('click', () => descargarLibro('compras'));
     },
   };
 

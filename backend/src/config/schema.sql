@@ -1,3 +1,17 @@
+-- CONFIGURACIÓN DE NEGOCIO (clave-valor) — tasa BCV manual, etc.
+CREATE TABLE IF NOT EXISTS configuracion_negocio (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    clave VARCHAR(100) NOT NULL,
+    valor TEXT NOT NULL,
+    tipo VARCHAR(20) DEFAULT 'string',
+    negocio_id INTEGER DEFAULT 1,
+    creado_en TIMESTAMP DEFAULT NOW(),
+    actualizado_en TIMESTAMP,
+    CONSTRAINT uq_config_clave UNIQUE (clave, negocio_id)
+);
+
+-- AUDITORÍA FORENSE — Cadena de hashes inviolable
+CREATE TABLE IF NOT EXISTS audit_trail (
 -- AUDITORÍA FORENSE — Cadena de hashes inviolable
 CREATE TABLE IF NOT EXISTS audit_trail (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
